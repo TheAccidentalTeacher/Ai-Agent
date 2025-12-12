@@ -8,7 +8,71 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 ### Planned
-- See AI_CONTEXT.md "What Doesn't Exist" section for potential features
+- Phase 2: AI Chat Panel UI
+- Phase 3: AI API Integration (Anthropic/OpenAI)
+- Phase 4: AI Tool Calling System
+- See MASTER_ROADMAP.md for complete implementation plan
+
+---
+
+## [1.1.0] - 2025-12-11
+
+### ✨ Phase 1 Complete - Universal Tooltips
+
+**Goal**: 100% tooltip coverage on every interactive UI element
+
+### Added - Tooltip System
+- **TooltipManager Class** (`tooltip.js`, 330 lines)
+  - Intelligent positioning system (auto, top, bottom, left, right)
+  - Smart collision detection with viewport edges
+  - 500ms show delay for non-intrusive UX
+  - 100ms hide delay for smooth transitions
+  - Fade-in/fade-out animations (150ms)
+  - Arrow pointers for visual clarity
+  - Support for `<kbd>` tags for keyboard shortcuts
+  - Escape key to dismiss tooltips
+  - Scroll/resize event handling
+
+- **17+ Comprehensive Tooltips**
+  - **Toolbar buttons (6)**: Load Background, Add Asset, Export JSON, Save Project, Load Project, Clear All
+  - **Canvas (1)**: Complete interaction guide (click, drag, arrow keys, Shift+Arrow, Delete)
+  - **Status bar (2)**: Mouse coordinates, Object count
+  - **Property inputs (6)**: Name, X, Y, Width, Height, Rotation
+  - **Property buttons (2)**: Duplicate, Delete
+
+- **Tooltip Content**
+  - Clear descriptions of functionality
+  - Keyboard shortcuts displayed in monospace `<kbd>` tags
+  - Important warnings highlighted with `<strong>` tags
+  - Multi-line explanations for complex features
+  - Context-aware positioning
+
+- **CSS Styling**
+  - Dark theme (#2d2d30 background)
+  - Subtle border (#454545)
+  - Drop shadow for depth
+  - Arrow indicators matching position
+  - Maximum width 320px with word wrapping
+  - Smooth opacity transitions
+
+### Technical Changes
+- **New Files**:
+  - `tooltip.js` - TooltipManager class implementation
+  
+- **Modified Files**:
+  - `index.html` - Added tooltip.js script tag
+  - `style.css` - Added 94 lines of tooltip CSS
+  - `editor.js` - Added TOOLTIPS object, PROPERTY_TOOLTIPS object, initializeTooltips() method, registerPropertyTooltips() method
+
+- **Code Statistics**:
+  - Total tooltip system: ~500 lines (JavaScript + CSS + definitions)
+  - Tooltips registered: 17+ (static) + dynamic property tooltips
+
+### UX Improvements
+- No more guessing what buttons do
+- Keyboard shortcuts discoverable via hover
+- Complex features explained in context
+- Professional polish matching VS Code style
 
 ---
 

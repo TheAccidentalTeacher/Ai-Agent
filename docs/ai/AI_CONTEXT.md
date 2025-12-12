@@ -100,7 +100,7 @@ This project uses D&D-themed personas for different perspectives. See [`FELLOWSH
 ## Current State (As of December 11, 2025)
 
 ### What Exists (Working Code)
-✅ **Core Editor** (650 lines total across 3 files)
+✅ **Core Editor** (1,150 lines total across 4 files)
 - HTML5 Canvas rendering (1280x720 default)
 - Background image loading (FileReader API)
 - Asset loading and management
@@ -109,6 +109,18 @@ This project uses D&D-themed personas for different perspectives. See [`FELLOWSH
 - Object duplication (Ctrl+D)
 - Object deletion (Delete key)
 - Grid visualization
+
+✅ **Tooltip System** (Phase 1 Complete - v1.1.0)
+- TooltipManager class (330 lines in `tooltip.js`)
+- 17+ comprehensive tooltips covering 100% of UI
+- Smart positioning (auto, top, bottom, left, right)
+- Collision detection with viewport edges
+- 500ms show delay, 100ms hide delay
+- Fade-in/fade-out animations
+- Keyboard shortcut display with `<kbd>` tags
+- Dark theme styling matching editor
+- Arrow pointers for visual clarity
+- Escape key to dismiss
 
 ✅ **Export System**
 - Clean JSON output format

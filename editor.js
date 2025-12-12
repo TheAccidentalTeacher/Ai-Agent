@@ -4,6 +4,65 @@
 // Built for Netlify deployment and local development
 // ============================================================================
 
+// ============================================================================
+// TOOLTIP DEFINITIONS
+// Comprehensive tooltips for every interactive element in the editor
+// ============================================================================
+
+const TOOLTIPS = {
+    // Toolbar buttons (6 tooltips)
+    '#load-background': {
+        text: 'Load a background image for your level. Supports PNG, JPG, GIF, WebP. Use <kbd>Ctrl+B</kbd> as shortcut.',
+        position: 'bottom'
+    },
+    '#add-asset': {
+        text: 'Add game objects like sprites, enemies, or items. Select multiple files at once. Use <kbd>Ctrl+A</kbd> as shortcut.',
+        position: 'bottom'
+    },
+    '#export-json': {
+        text: 'Export level data as clean JSON for your game engine. Auto-copies to clipboard. Use <kbd>Ctrl+E</kbd> as shortcut.',
+        position: 'bottom'
+    },
+    '#save-project': {
+        text: 'Save complete project with all images embedded as base64. Can reload later with full fidelity. Use <kbd>Ctrl+S</kbd> as shortcut.',
+        position: 'bottom'
+    },
+    '#load-project': {
+        text: 'Load a previously saved project file (.json). Restores all objects, background, and properties. Use <kbd>Ctrl+O</kbd> as shortcut.',
+        position: 'bottom'
+    },
+    '#clear-all': {
+        text: 'Remove all objects and background from the canvas. <strong>Cannot be undone</strong> - you will be asked to confirm.',
+        position: 'bottom'
+    },
+    
+    // Canvas (1 tooltip)
+    '#canvas': {
+        text: 'Main editing area. <strong>Click</strong> objects to select. <strong>Drag</strong> to move. <strong>Arrow keys</strong> for precise 1px positioning. <strong>Shift+Arrow</strong> moves 10px. <strong>Delete</strong> to remove.',
+        position: 'top'
+    },
+    
+    // Status bar elements (2 tooltips)
+    '#mouse-coords': {
+        text: 'Current mouse position on canvas in pixels (X, Y). Updates in real-time as you move your cursor.',
+        position: 'top'
+    },
+    '#object-count': {
+        text: 'Total number of objects currently placed in your level. Does not include the background image.',
+        position: 'top'
+    }
+};
+
+// Dynamic tooltips for properties panel (added when object selected)
+const PROPERTY_TOOLTIPS = {
+    name: 'Display name for this object. Used in JSON exports and for organization. Can be any text.',
+    x: 'Horizontal position in pixels. 0 = left edge of canvas. Increases toward the right.',
+    y: 'Vertical position in pixels. 0 = top edge of canvas. Increases downward.',
+    width: 'Object width in pixels. Change to scale the sprite. Original size can be restored by reloading the asset.',
+    height: 'Object height in pixels. Change to scale the sprite. Maintains original aspect ratio unless both width and height are manually changed.',
+    rotation: 'Rotation angle in degrees. 0 = no rotation. 90 = quarter turn clockwise. 180 = upside down. 360 = full circle (same as 0).'
+};
+
 class GameEditor {
     constructor() {
         // Canvas setup
@@ -31,13 +90,62 @@ class GameEditor {
         this.assetInput = document.getElementById('asset-input');
         this.projectInput = document.getElementById('project-input');
 
+        // Tooltip system
+        this.tooltipManager = null;
+
         // Initialize
         this.setupEventListeners();
+        this.initializeTooltips();
         this.startRenderLoop();
         this.updateObjectCount();
 
         console.log('🎮 Game Editor initialized successfully!');
         this.updateStatus('Ready to create! Load a background or add an asset to begin.');
+    }
+
+    // ========================================================================
+    // TOOLTIP SYSTEM
+    // ========================================================================
+
+    initializeTooltips() {
+        // Create tooltip manager
+        this.tooltipManager = new TooltipManager();
+        this.tooltipManager.init();
+        
+        // Register all static tooltips
+        const registered = this.tooltipManager.registerAll(TOOLTIPS);
+        
+        console.log(`✓ Initialized ${registered} tooltips`);
+    }
+    
+    // Called when properties panel is updated with selected object
+    registerPropertyTooltips() {
+        // Register tooltips for property input fields
+        for (const [property, tooltipText] of Object.entries(PROPERTY_TOOLTIPS)) {
+            const input = document.getElementById(`prop-${property}`);
+            if (input) {
+                this.tooltipManager.register(input, tooltipText, 'right');
+            }
+        }
+        
+        // Register tooltips for property action buttons
+        const duplicateBtn = document.getElementById('btn-duplicate-obj');
+        if (duplicateBtn) {
+            this.tooltipManager.register(
+                duplicateBtn,
+                'Create a copy of this object offset by 20px. Uses <kbd>Ctrl+D</kbd> shortcut. Shares same image data.',
+                'right'
+            );
+        }
+        
+        const deleteBtn = document.getElementById('btn-delete-obj');
+        if (deleteBtn) {
+            this.tooltipManager.register(
+                deleteBtn,
+                'Remove this object from the level permanently. Uses <kbd>Delete</kbd> or <kbd>Backspace</kbd> key. <strong>Cannot be undone.</strong>',
+                'right'
+            );
+        }
     }
 
     // ========================================================================
@@ -523,6 +631,9 @@ class GameEditor {
         document.getElementById('btn-delete-obj').addEventListener('click', () => {
             this.deleteSelected();
         });
+        
+        // Register tooltips for all property elements
+        this.registerPropertyTooltips();
     }
 
     // ========================================================================

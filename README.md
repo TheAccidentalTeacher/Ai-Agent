@@ -4,6 +4,7 @@ A lightweight, browser-based 2D game level editor that works with any game. Buil
 
 ## Features
 
+- **✨ Universal Tooltips** (NEW v1.1.0) - Every UI element has helpful, context-aware tooltips with keyboard shortcuts
 - **Load Background Images**: Set your level background from any image file
 - **Add Game Assets**: Browse and add multiple sprites/objects to your scene
 - **Drag & Drop Positioning**: Click and drag objects to arrange your level
@@ -11,7 +12,7 @@ A lightweight, browser-based 2D game level editor that works with any game. Buil
 - **Object Duplication**: Quickly copy objects with Ctrl+D
 - **JSON Export**: Clean, game-ready JSON with clipboard copy + file download
 - **Project Save/Load**: Save entire projects (including images) for later editing
-- **Keyboard Shortcuts**: Fast workflow with built-in shortcuts
+- **Keyboard Shortcuts**: Fast workflow with built-in shortcuts (discoverable via tooltips!)
 - **Grid Visualization**: Visual grid for precise placement
 
 ## Usage

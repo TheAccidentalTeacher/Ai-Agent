@@ -323,3 +323,99 @@ button:active {
     opacity: 0.5;
     pointer-events: none;
 }
+
+/* ============================================================================
+   TOOLTIP SYSTEM
+   ============================================================================ */
+
+.tooltip {
+    position: fixed;
+    background: #2d2d30;
+    color: #cccccc;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 13px;
+    line-height: 1.5;
+    max-width: 320px;
+    word-wrap: break-word;
+    z-index: 10000;
+    pointer-events: none;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    border: 1px solid #454545;
+    
+    /* Smooth transitions */
+    opacity: 0;
+    transition: opacity 0.15s ease-in-out;
+}
+
+.tooltip::before {
+    content: '';
+    position: absolute;
+    width: 0;
+    height: 0;
+    border-style: solid;
+}
+
+/* Tooltip positioning variants with arrows */
+
+.tooltip-top::before {
+    bottom: -6px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-width: 6px 6px 0 6px;
+    border-color: #2d2d30 transparent transparent transparent;
+}
+
+.tooltip-bottom::before {
+    top: -6px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-width: 0 6px 6px 6px;
+    border-color: transparent transparent #2d2d30 transparent;
+}
+
+.tooltip-left::before {
+    right: -6px;
+    top: 50%;
+    transform: translateY(-50%);
+    border-width: 6px 0 6px 6px;
+    border-color: transparent transparent transparent #2d2d30;
+}
+
+.tooltip-right::before {
+    left: -6px;
+    top: 50%;
+    transform: translateY(-50%);
+    border-width: 6px 6px 6px 0;
+    border-color: transparent #2d2d30 transparent transparent;
+}
+
+/* Tooltip for keyboard shortcuts (bold monospace) */
+
+.tooltip kbd {
+    display: inline-block;
+    padding: 2px 6px;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 11px;
+    background: #1e1e1e;
+    border: 1px solid #454545;
+    border-radius: 3px;
+    margin: 0 2px;
+}
+
+/* Tooltip emphasis */
+
+.tooltip strong {
+    color: #ffffff;
+    font-weight: 600;
+}
+
+/* Tooltip code blocks */
+
+.tooltip code {
+    background: #1e1e1e;
+    padding: 2px 4px;
+    border-radius: 2px;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 12px;
+}
