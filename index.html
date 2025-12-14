@@ -474,6 +474,81 @@
                         });
                         console.log('%c[SUCCESS] Manual listener attached to Clear All button', 'color: #00FF00; font-weight: bold');
                     }
+                    
+                    // Fallback for Execute Workflow button
+                    const executeBtn = document.querySelector('#execute-workflow');
+                    if (executeBtn) {
+                        executeBtn.addEventListener('click', async (e) => {
+                            console.log('%c[FALLBACK] Execute Workflow button clicked!', 'color: #0088FF; font-weight: bold');
+                            
+                            const questionInput = document.querySelector('.question-input');
+                            const question = questionInput?.value?.trim();
+                            console.log(`  Question: "${question || '[empty]'}"`);
+                            
+                            if (!question) {
+                                console.log('%c[ERROR] No question entered!', 'color: #FF0000; font-weight: bold');
+                                alert('Please enter a question');
+                                return;
+                            }
+                            
+                            const checkboxes = document.querySelectorAll('input[type="checkbox"][name="persona"]:checked');
+                            const personas = Array.from(checkboxes).map(cb => cb.value);
+                            console.log(`  Selected personas: ${personas.length}`);
+                            
+                            if (personas.length === 0) {
+                                console.log('%c[WARNING] No personas selected, auto-selecting all', 'color: #FFAA00; font-weight: bold');
+                                Array.from(document.querySelectorAll('input[type="checkbox"][name="persona"]')).forEach(cb => cb.checked = true);
+                                personas.push(...Array.from(document.querySelectorAll('input[type="checkbox"][name="persona"]')).map(cb => cb.value));
+                            }
+                            
+                            const modeButtons = document.querySelectorAll('.mode-btn.active');
+                            const mode = modeButtons[0]?.dataset?.mode || 'panel';
+                            console.log(`  Mode: ${mode}`);
+                            
+                            // Show loading state
+                            executeBtn.disabled = true;
+                            executeBtn.textContent = '⏳ Executing...';
+                            const resultsDiv = document.getElementById('multi-agent-results');
+                            if (resultsDiv) resultsDiv.innerHTML = '<p>Loading...</p>';
+                            
+                            try {
+                                console.log('%c[API] Sending request to /api/multi-agent', 'color: #00FF00; font-weight: bold');
+                                const response = await fetch('/api/multi-agent', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ question, mode, personas })
+                                });
+                                
+                                if (!response.ok) {
+                                    throw new Error(`API returned ${response.status}: ${response.statusText}`);
+                                }
+                                
+                                const result = await response.json();
+                                console.log('%c[SUCCESS] API response received', 'color: #00FF00; font-weight: bold', result);
+                                
+                                // Display results
+                                if (resultsDiv) {
+                                    resultsDiv.innerHTML = `
+                                        <div class="synthesis"><strong>Synthesis:</strong> ${result.synthesis || 'No synthesis'}</div>
+                                        <div class="responses" style="margin-top: 20px;">
+                                            ${(result.responses || []).map(r => `
+                                                <div class="response-card" style="margin: 10px 0; padding: 10px; background: #2a2a2a; border-left: 3px solid #007acc;">
+                                                    <strong>${r.persona}:</strong> ${r.response}
+                                                </div>
+                                            `).join('')}
+                                        </div>
+                                    `;
+                                }
+                            } catch (error) {
+                                console.error('%c[ERROR] Workflow execution failed', 'color: #FF0000; font-weight: bold', error);
+                                if (resultsDiv) resultsDiv.innerHTML = `<p style="color: #FF0000;"><strong>Error:</strong> ${error.message}</p>`;
+                            } finally {
+                                executeBtn.disabled = false;
+                                executeBtn.textContent = '▶️ Execute Workflow';
+                            }
+                        });
+                        console.log('%c[SUCCESS] Manual listener attached to Execute Workflow button', 'color: #00FF00; font-weight: bold');
+                    }
                 }
             }, 500);
         });

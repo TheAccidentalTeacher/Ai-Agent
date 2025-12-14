@@ -502,13 +502,7 @@ class MultiAgentUIController {
       });
     }, 100);
     
-    log('SUCCESS', '✅ Animations applied')
-      cards.forEach((card, index) => {
-        setTimeout(() => {
-          card.style.animation = 'fadeIn 0.3s ease-out forwards';
-        }, index * 100);
-      });
-    }, 0);
+    log('SUCCESS', '✅ Animations applied');
   }
 
   formatResults(result) {
