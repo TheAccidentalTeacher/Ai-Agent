@@ -154,11 +154,6 @@ class MultiAgentUIController {
           modal.style.display = 'none';
         }
       });
-    }        }
-      });
-      log('SUCCESS', 'Hide button listener attached');
-    } else {
-      log('WARN', 'toggle-multi-agent button not found');
     }
   }
 
