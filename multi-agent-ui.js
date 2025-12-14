@@ -582,18 +582,39 @@ class MultiAgentUIController {
   formatMarkdown(content) {
     if (!content) return '';
     
-    return content
-      .replace(/\n\n/g, '</p><p>')
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-      .replace(/\*(.*?)\*/g, '<em>$1</em>')
-      .replace(/^### (.*?)$/gm, '<h3>$1</h3>')
-      .replace(/^## (.*?)$/gm, '<h2>$1</h2>')
-      .replace(/^- (.*?)$/gm, '<li>$1</li>')
-      .replace(/(<li>.*?<\/li>)/s, '<ul>$1</ul>')
-      .split('\n')
-      .map(line => line.trim() ? `<p>${line}</p>` : '')
-      .join('')
-      .replace(/<p><\/p>/g, '');
+    let html = content;
+    
+    // Convert headings (must be before other replacements)
+    html = html.replace(/^### (.*?)$/gm, '<h3>$1</h3>');
+    html = html.replace(/^## (.*?)$/gm, '<h2>$1</h2>');
+    html = html.replace(/^# (.*?)$/gm, '<h1>$1</h1>');
+    
+    // Convert bold and italic
+    html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
+    
+    // Convert lists
+    html = html.replace(/^- (.*?)$/gm, '<li>$1</li>');
+    html = html.replace(/(<li>.*?<\/li>)/s, '<ul>$1</ul>');
+    
+    // Convert paragraphs - split by double newline
+    const paragraphs = html.split(/\n\n+/);
+    html = paragraphs
+      .map(para => {
+        // Skip if already wrapped in tags
+        if (para.trim().match(/^<[hul]/)) {
+          return para;
+        }
+        // Skip if it's a list item
+        if (para.trim().match(/^<li/)) {
+          return para;
+        }
+        // Wrap plain text paragraphs
+        return para.trim() ? `<p>${para.trim()}</p>` : '';
+      })
+      .join('\n');
+    
+    return html;
   }
 
   formatPersonaName(personaName) {
