@@ -1982,10 +1982,10 @@ button:active {
     background: #1e1e1e;
     border: 1px solid #3c3c3c;
     border-radius: 12px;
-    width: 90vw;
-    height: 90vh;
-    max-width: 1400px;
-    max-height: 800px;
+    width: 96vw;
+    height: 96vh;
+    max-width: none;
+    max-height: none;
     display: flex;
     flex-direction: column;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
@@ -2354,8 +2354,8 @@ button:active {
     flex-direction: column;
     gap: 12px;
     overflow-y: auto;
-    max-height: 400px;
-    min-height: 200px;
+    flex: 1 1 auto;
+    min-height: 300px;
 }
 
 .research-results-list::-webkit-scrollbar {
@@ -2465,7 +2465,8 @@ button:active {
     background: #2d2d30;
     border-radius: 6px;
     border: 1px solid #3c3c3c;
-    max-height: 500px;
+    flex: 0 0 auto;
+    max-height: 50vh;
     overflow-y: auto;
 }
 
