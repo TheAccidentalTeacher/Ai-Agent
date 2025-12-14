@@ -193,10 +193,21 @@ export function createPersonaAgent(
 ) {
   const personaContent = loadPersonaContent(personaName);
   const personaInfo = getPersonaInfo(personaName);
-  const llm = createLLMClient(model, provider);
 
   return async (state) => {
     try {
+      // Get provider/model from state if available (overrides defaults)
+      let effectiveProvider = provider;
+      let effectiveModel = model;
+      if (state.executionMetadata?.provider) {
+        effectiveProvider = state.executionMetadata.provider;
+      }
+      if (state.executionMetadata?.model) {
+        effectiveModel = state.executionMetadata.model;
+      }
+
+      const llm = createLLMClient(effectiveModel, effectiveProvider);
+      
       let memoryContext = "";
       if (memory) {
         const recentContext = memory.getRecentContext(5);
@@ -360,12 +371,15 @@ export async function synthesizerAgent(state) {
     };
   }
 
-  const llm = createLLMClient("gpt-4o");
+  // Get provider from state (defaults to anthropic)
+  const provider = state.executionMetadata?.provider || 'anthropic';
+  const model = state.executionMetadata?.model;
+  const llm = createLLMClient(model, provider);
 
   const personaResponses = state.personaResponses
     .map(
       (r) =>
-        `**${r.personaInfo.icon} ${r.personaInfo.name}:**\n${r.response}`
+        `**${r.personaInfo.icon} ${r.personaInfo.name}:**\n${r.response || r.content}`
     )
     .join("\n\n---\n\n");
 
@@ -669,7 +683,9 @@ export async function executeMultiAgentWorkflow(
       executionMetadata: {
         startTime: startTime,
         totalTokens: 0,
-        agentsExecuted: []
+        agentsExecuted: [],
+        provider: provider,
+        model: model
       }
     };
 
