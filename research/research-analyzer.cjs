@@ -155,21 +155,56 @@ class ResearchAnalyzer {
         title: content.title,
         url: content.url,
         wordCount: content.wordCount,
-        excerpt: content.excerpt || content.content?.substring(0, 300) + '...',
+        excerpt: content.excerpt || content.content?.substring(0, 500) + '...',
         author: content.author,
         date: content.publishedDate
       }));
 
-    // Combine chunks into full content (limited to avoid token overflow)
-    const fullContent = chunks.map(chunk => chunk.content).join('\n\n---\n\n');
+    // CRITICAL: Claude has 200K token limit, system prompt + user prompt + response must fit
+    // Safe approach: Use only 100K tokens for content (~400K chars, but we'll be conservative)
+    // Strategy: Sample chunks intelligently rather than just truncating
     
-    // Limit to ~40K tokens worth of content (~160K chars)
-    const limitedContent = fullContent.substring(0, 160000);
+    let fullContent = '';
+    const maxContentChars = 300000; // ~75K tokens for content (leaving room for prompts)
+    
+    if (chunks.length <= 10) {
+      // Few chunks: use them all
+      fullContent = chunks.map(chunk => chunk.content).join('\n\n---\n\n');
+    } else {
+      // Many chunks: sample strategically
+      // Take first 3, last 3, and evenly spaced middle samples
+      const sampled = [];
+      sampled.push(...chunks.slice(0, 3)); // Beginning
+      
+      if (chunks.length > 10) {
+        const middleStart = Math.floor(chunks.length / 3);
+        const middleEnd = Math.floor(2 * chunks.length / 3);
+        sampled.push(...chunks.slice(middleStart, middleStart + 3)); // Middle
+        sampled.push(...chunks.slice(middleEnd, middleEnd + 3)); // Late middle
+      }
+      
+      sampled.push(...chunks.slice(-3)); // End
+      
+      fullContent = sampled.map((chunk, idx) => {
+        const chunkNum = chunks.indexOf(chunk) + 1;
+        return `[Chunk ${chunkNum}/${chunks.length}]\n${chunk.content}`;
+      }).join('\n\n---\n\n');
+      
+      console.log(`[ResearchAnalyzer] Sampled ${sampled.length}/${chunks.length} chunks for analysis`);
+    }
+    
+    // Final safety: hard truncate if still too large
+    if (fullContent.length > maxContentChars) {
+      fullContent = fullContent.substring(0, maxContentChars) + '\n\n[Content truncated due to length...]';
+      console.log(`[ResearchAnalyzer] Content truncated to ${maxContentChars} chars`);
+    }
 
     return {
       sources,
-      fullContent: limitedContent,
-      totalWords: extractedContent.reduce((sum, c) => sum + (c.wordCount || 0), 0)
+      fullContent,
+      totalWords: extractedContent.reduce((sum, c) => sum + (c.wordCount || 0), 0),
+      totalChunks: chunks.length,
+      sampledChunks: chunks.length > 10 ? 12 : chunks.length
     };
   }
 
@@ -201,7 +236,7 @@ ${s.date ? `- Published: ${s.date}` : ''}
 `).join('\n')}
 
 # Full Extracted Content
-${contentSummary.fullContent}
+${contentSummary.totalChunks > 10 ? `Note: Large content (${contentSummary.totalChunks} chunks total). Analyzed ${contentSummary.sampledChunks} representative samples.\n\n` : ''}${contentSummary.fullContent}
 
 ---
 
