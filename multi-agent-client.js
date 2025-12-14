@@ -21,8 +21,11 @@ class MultiAgentClient {
    */
   async executeWorkflow(question, mode = 'panel', personas = null) {
     try {
-      console.log(`🤖 Multi-Agent Request: ${mode} mode`);
-      console.log(`   Question: ${question.substring(0, 100)}...`);
+      console.log(`%c🤖 Multi-Agent API Call`, 'color: #FF8800; font-weight: bold');
+      console.log(`   📨 Mode: ${mode}`);
+      console.log(`   ❓ Question: ${question.substring(0, 100)}${question.length > 100 ? '...' : ''}`);
+      console.log(`   👥 Personas: ${personas?.length || 'auto-select'}`);
+      console.log(`   🔗 Endpoint: ${this.endpoint}`);
       
       const payload = {
         question,
@@ -30,6 +33,9 @@ class MultiAgentClient {
         ...(personas && { personas })
       };
 
+      console.log(`   📦 Payload:`, payload);
+
+      console.log(`   📡 Fetching from: ${this.endpoint}`);
       const response = await fetch(this.endpoint, {
         method: 'POST',
         headers: {
@@ -38,16 +44,24 @@ class MultiAgentClient {
         body: JSON.stringify(payload)
       });
 
+      console.log(`   ✓ Response status: ${response.status}`);
+
       if (!response.ok) {
+        console.log(`   ❌ HTTP Error: ${response.status}`);
         const errorData = await response.json();
         throw new Error(errorData.error || `API error: ${response.status}`);
       }
 
       const data = await response.json();
+      console.log(`   ✓ Response received, keys:`, Object.keys(data));
       
       if (!data.success) {
+        console.log(`   ❌ API returned success=false`);
         throw new Error(data.error || 'Unknown error');
       }
+
+      console.log(`   ✅ Success! Responses received:`, data.responses?.length || 0);
+      return data;
 
       console.log(`✅ Multi-Agent Response received`);
       console.log(`   Mode: ${data.data.mode}`);

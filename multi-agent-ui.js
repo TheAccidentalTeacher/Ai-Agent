@@ -353,12 +353,19 @@ class MultiAgentUIController {
 
     log('DEBUG', `Question input element: ${questionInput ? 'found' : 'NOT FOUND'}`);
     log('DEBUG', `Question value: "${question || '[empty]'}"`);
+    log('DEBUG', `Question length: ${question?.length || 0} chars`);
     log('DEBUG', `Current mode: ${this.currentMode}`);
     log('DEBUG', `Selected personas: ${this.selectedPersonas.length}`);
+    
+    if (this.selectedPersonas.length === 0) {
+      log('WARN', '⚠️ No personas selected - auto-selecting all');
+      // Auto-select all if none selected
+      this.selectAllPersonas();
+    }
 
     if (!question) {
       log('ERROR', '❌ No question provided!');
-      this.showError('Please enter a question');
+      alert('⚠️ Please enter a question before executing');
       return;
     }
 
@@ -370,7 +377,10 @@ class MultiAgentUIController {
       log('API', `📨 Sending to API:`);
       log('DEBUG', `  Mode: ${this.currentMode}`);
       log('DEBUG', `  Personas: ${this.selectedPersonas.length} selected`);
-      log('DEBUG', `  Question: "${question.substring(0, 100)}..."`);
+      log('DEBUG', `  Selected: [${this.selectedPersonas.slice(0, 3).join(', ')}${this.selectedPersonas.length > 3 ? '...' : ''}]`);
+      log('DEBUG', `  Question: "${question.substring(0, 100)}${question.length > 100 ? '...' : ''}"`);
+      
+      log('API', `📡 API Client: ${this.client ? 'initialized' : 'NOT INITIALIZED'}`);
       
       const startAPITime = performance.now();
       const result = await this.client.executeWorkflow(
@@ -382,10 +392,11 @@ class MultiAgentUIController {
       
       log('PERF', `⚡ API response received in ${(apiTime).toFixed(2)}ms`);
       log('SUCCESS', '✅ Workflow completed successfully');
+      log('DEBUG', 'Result object keys:', Object.keys(result));
       
       this.currentResult = result;
       log('DEBUG', 'Response structure:', {
-        synthesis: result.synthesis ? '✓' : '✗',
+        synthesis: result.synthesis ? `${result.synthesis.substring(0, 50)}...` : 'MISSING',
         responses: result.responses?.length || 0,
         mode: result.mode
       });
@@ -394,9 +405,11 @@ class MultiAgentUIController {
       
       const totalTime = performance.now() - startTime;
       log('PERF', `⚡ Total execution time: ${(totalTime).toFixed(2)}ms`);
+      log('SUCCESS', '✅ Results displayed to user');
       
     } catch (error) {
       log('ERROR', `❌ Workflow error: ${error.message}`);
+      log('DEBUG', 'Error type:', error.constructor.name);
       log('DEBUG', 'Error stack:', error.stack);
       this.showError(error.message);
     } finally {
