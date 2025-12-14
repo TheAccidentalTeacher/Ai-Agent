@@ -249,19 +249,6 @@ class MultiAgentUIController {
     log('SUCCESS', '✅ All event listeners attached');
   }
 
-    // Execute button
-    const executeBtn = document.querySelector('.execute-btn');
-    if (executeBtn) {
-      executeBtn.addEventListener('click', () => this.executeWorkflow());
-    }
-
-    // Select All / Clear All buttons
-    const selectAllBtn = document.querySelector('.persona-select-all');
-    const clearAllBtn = document.querySelector('.persona-clear-all');
-    if (selectAllBtn) selectAllBtn.addEventListener('click', () => this.selectAllPersonas());
-    if (clearAllBtn) clearAllBtn.addEventListener('click', () => this.clearAllPersonas());
-  }
-
   selectMode(mode) {
     log('INFO', `🧭 selectMode() called with mode: "${mode}"`);
     
