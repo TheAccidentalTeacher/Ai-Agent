@@ -54,7 +54,7 @@ const formatResponse = (result, executionTime) => ({
     personas: result.selectedPersonas,
     responses: (result.personaResponses || []).map(r => ({
       persona: r.persona,
-      response: r.response || r.content
+      content: r.response || r.content || ''
     })),
     synthesis: result.synthesis || result.synthesisResult,
     metadata: {

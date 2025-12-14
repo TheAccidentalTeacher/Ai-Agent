@@ -66,9 +66,7 @@ class MultiAgentClient {
         throw new Error(data.error || 'Unknown error');
       }
 
-      console.log(`   ✅ Success! Responses received:`, data.responses?.length || 0);
-      return data;
-
+      console.log(`   ✅ Success! Responses received:`, data.data.responses?.length || 0);
       console.log(`✅ Multi-Agent Response received`);
       console.log(`   Mode: ${data.data.mode}`);
       console.log(`   Agents: ${data.data.personas.join(', ')}`);
