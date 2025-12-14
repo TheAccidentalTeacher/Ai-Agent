@@ -398,5 +398,53 @@
     <script src="agent-memory.js"></script>
     <script src="editor.js"></script>
     <script type="module" src="multi-agent-ui.js"></script>
+    
+    <!-- Fallback initialization for multi-agent UI -->
+    <script>
+        // Log that script is running
+        console.log('%c[INIT] Fallback initialization script running', 'color: #00FF00; font-weight: bold');
+        
+        // Wait for DOM and module to load
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('%c[INIT] DOM Content Loaded', 'color: #0088FF; font-weight: bold');
+            
+            // Check if controller was initialized
+            setTimeout(() => {
+                if (window.multiAgentUI) {
+                    console.log('%c[SUCCESS] MultiAgentUI controller found and active', 'color: #00FF00; font-weight: bold');
+                } else {
+                    console.log('%c[WARNING] MultiAgentUI controller not found - attempting manual initialization', 'color: #FFAA00; font-weight: bold');
+                    
+                    // Manual setup as fallback
+                    const showBtn = document.getElementById('show-multi-agent');
+                    const section = document.getElementById('multi-agent-section');
+                    const hideBtn = document.getElementById('toggle-multi-agent');
+                    
+                    console.log('%c[DEBUG] Manual setup - checking elements:', 'color: #888888');
+                    console.log('  Show button:', showBtn ? '✓ found' : '✗ NOT FOUND');
+                    console.log('  Section:', section ? '✓ found' : '✗ NOT FOUND');
+                    console.log('  Hide button:', hideBtn ? '✓ found' : '✗ NOT FOUND');
+                    
+                    if (showBtn && section) {
+                        showBtn.addEventListener('click', (e) => {
+                            console.log('%c[CLICK] 🤖 Robot button clicked!', 'color: #0088FF; font-weight: bold');
+                            section.style.display = 'block';
+                            console.log('%c[SUCCESS] Multi-agent section shown', 'color: #00FF00; font-weight: bold');
+                        });
+                        console.log('%c[SUCCESS] Manual listener attached to show button', 'color: #00FF00; font-weight: bold');
+                    }
+                    
+                    if (hideBtn && section) {
+                        hideBtn.addEventListener('click', (e) => {
+                            console.log('%c[CLICK] Hide button clicked!', 'color: #0088FF; font-weight: bold');
+                            section.style.display = 'none';
+                            console.log('%c[SUCCESS] Multi-agent section hidden', 'color: #00FF00; font-weight: bold');
+                        });
+                        console.log('%c[SUCCESS] Manual listener attached to hide button', 'color: #00FF00; font-weight: bold');
+                    }
+                }
+            }, 500);
+        });
+    </script>
 </body>
 </html>
