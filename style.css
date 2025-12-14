@@ -1449,6 +1449,8 @@ button:active {
     padding: 20px;
     background: #1e1e1e;
     border-radius: 8px;
+    max-height: 100%;
+    overflow: hidden;
 }
 
 /* Mode Selector */
@@ -1670,9 +1672,13 @@ button:active {
 /* Results Display */
 .multi-agent-results {
     min-height: 200px;
+    max-height: 600px;
     display: flex;
     flex-direction: column;
     gap: 20px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-right: 8px;
 }
 
 /* Synthesis Section */
