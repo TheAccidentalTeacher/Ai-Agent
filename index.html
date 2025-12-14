@@ -343,36 +343,45 @@
                 } else {
                     console.log('%c[WARNING] MultiAgentUI controller not found - attempting manual initialization', 'color: #FFAA00; font-weight: bold');
                     
-                    // Manual setup as fallback
+                    // Manual setup as fallback - now using modal
                     const showBtn = document.getElementById('show-multi-agent');
-                    const section = document.getElementById('multi-agent-section');
-                    const hideBtn = document.getElementById('toggle-multi-agent');
+                    const modal = document.getElementById('multi-agent-modal');
+                    const closeBtn = document.getElementById('modal-close');
                     
                     console.log('%c[DEBUG] Manual setup - checking elements:', 'color: #888888');
                     console.log('  Show button:', showBtn ? '✓ found' : '✗ NOT FOUND');
-                    console.log('  Section:', section ? '✓ found' : '✗ NOT FOUND');
-                    console.log('  Hide button:', hideBtn ? '✓ found' : '✗ NOT FOUND');
+                    console.log('  Modal:', modal ? '✓ found' : '✗ NOT FOUND');
+                    console.log('  Close button:', closeBtn ? '✓ found' : '✗ NOT FOUND');
                     
-                    if (showBtn && section) {
+                    if (showBtn && modal) {
                         showBtn.addEventListener('click', (e) => {
                             console.log('%c[CLICK] 🤖 Robot button clicked!', 'color: #0088FF; font-weight: bold');
-                            section.style.display = 'block';
-                            console.log('%c[SUCCESS] Multi-agent section shown', 'color: #00FF00; font-weight: bold');
+                            modal.style.display = 'flex';
+                            console.log('%c[SUCCESS] Modal shown', 'color: #00FF00; font-weight: bold');
                         });
                         console.log('%c[SUCCESS] Manual listener attached to show button', 'color: #00FF00; font-weight: bold');
                     }
                     
-                    if (hideBtn && section) {
-                        hideBtn.addEventListener('click', (e) => {
-                            console.log('%c[CLICK] Hide button clicked!', 'color: #0088FF; font-weight: bold');
-                            section.style.display = 'none';
-                            console.log('%c[SUCCESS] Multi-agent section hidden', 'color: #00FF00; font-weight: bold');
+                    if (closeBtn && modal) {
+                        closeBtn.addEventListener('click', (e) => {
+                            console.log('%c[CLICK] Close button clicked!', 'color: #0088FF; font-weight: bold');
+                            modal.style.display = 'none';
+                            console.log('%c[SUCCESS] Modal hidden', 'color: #00FF00; font-weight: bold');
                         });
-                        console.log('%c[SUCCESS] Manual listener attached to hide button', 'color: #00FF00; font-weight: bold');
+                        console.log('%c[SUCCESS] Manual listener attached to close button', 'color: #00FF00; font-weight: bold');
+                    }
+                    
+                    // Click outside modal to close
+                    if (modal) {
+                        modal.addEventListener('click', (e) => {
+                            if (e.target === modal) {
+                                modal.style.display = 'none';
+                            }
+                        });
                     }
                     
                     // Fallback for Select All button
-                    const selectAllBtn = document.querySelector('.persona-select-all');
+                    const selectAllBtn = document.getElementById('modal-select-all');
                     if (selectAllBtn) {
                         selectAllBtn.addEventListener('click', (e) => {
                             console.log('%c[FALLBACK] Select All button clicked!', 'color: #0088FF; font-weight: bold');
@@ -380,7 +389,6 @@
                             console.log(`  Found ${checkboxes.length} persona checkboxes`);
                             checkboxes.forEach((cb, i) => {
                                 cb.checked = true;
-                                console.log(`  ✓ Checked: ${cb.value}`);
                             });
                             console.log('%c[SUCCESS] All personas selected', 'color: #00FF00; font-weight: bold');
                         });
@@ -388,7 +396,7 @@
                     }
                     
                     // Fallback for Clear All button
-                    const clearAllBtn = document.querySelector('.persona-clear-all');
+                    const clearAllBtn = document.getElementById('modal-clear-all');
                     if (clearAllBtn) {
                         clearAllBtn.addEventListener('click', (e) => {
                             console.log('%c[FALLBACK] Clear All button clicked!', 'color: #0088FF; font-weight: bold');
@@ -396,7 +404,6 @@
                             console.log(`  Found ${checkboxes.length} persona checkboxes`);
                             checkboxes.forEach((cb, i) => {
                                 cb.checked = false;
-                                console.log(`  ✗ Unchecked: ${cb.value}`);
                             });
                             console.log('%c[SUCCESS] All personas cleared', 'color: #00FF00; font-weight: bold');
                         });
@@ -404,7 +411,7 @@
                     }
                     
                     // Fallback for Execute Workflow button
-                    const executeBtn = document.querySelector('#execute-workflow');
+                    const executeBtn = document.getElementById('modal-execute-workflow');
                     if (executeBtn) {
                         executeBtn.addEventListener('click', async (e) => {
                             console.log('%c[FALLBACK] Execute Workflow button clicked!', 'color: #0088FF; font-weight: bold');
@@ -436,7 +443,7 @@
                             // Show loading state
                             executeBtn.disabled = true;
                             executeBtn.textContent = '⏳ Executing...';
-                            const resultsDiv = document.getElementById('multi-agent-results');
+                            const resultsDiv = document.querySelector('.multi-agent-results');
                             if (resultsDiv) resultsDiv.innerHTML = '<p>Loading...</p>';
                             
                             try {
@@ -477,6 +484,7 @@
                         });
                         console.log('%c[SUCCESS] Manual listener attached to Execute Workflow button', 'color: #00FF00; font-weight: bold');
                     }
+                    
                     // Fallback for Mode buttons
                     const modeBtns = document.querySelectorAll('.mode-btn');
                     console.log(`%c[FALLBACK] Found ${modeBtns.length} mode buttons`, 'color: #0088FF; font-weight: bold');
@@ -501,7 +509,6 @@
                         });
                     });
                     console.log('%c[SUCCESS] Manual listeners attached to all mode buttons', 'color: #00FF00; font-weight: bold');
-                    
                 }
             }, 500);
         });
