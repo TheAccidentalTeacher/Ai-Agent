@@ -1,21 +1,53 @@
 /**
- * ResearchMemory - localStorage-based research session management
+ * ResearchMemory - Hybrid localStorage + Supabase research session management
  * 
- * Manages saving, loading, listing, and deleting research sessions.
- * Uses localStorage for persistence (Phase 6 Week 7-8).
- * Will be replaced with database in later phases.
+ * Phase 7: Multi-Device Cloud Sync
+ * 
+ * Architecture:
+ * - Save to localStorage INSTANTLY (no waiting, works offline)
+ * - Auto-sync to Supabase in background (cloud backup, multi-device access)
+ * - Load from Supabase first (get latest from any device)
+ * - Fallback to localStorage if offline or error
+ * 
+ * Benefits:
+ * - ⚡ Instant saves (no network delay)
+ * - ☁️ Cloud backup (never lose data)
+ * - 📱 Multi-device access (desktop, laptop, tablet, mobile)
+ * - 🔄 Real-time sync across devices
+ * - ⚠️ Works offline (localStorage fallback)
  */
+
+import { 
+  supabase, 
+  isAuthenticated, 
+  getUserId,
+  isOnline,
+  setSyncStatus,
+  SyncStatus
+} from './supabase-client.js';
 
 export class ResearchMemory {
   constructor() {
+    // localStorage keys
     this.storageKey = 'ucas-research-sessions';
-    this.maxSessions = 50; // Limit to prevent localStorage overflow
+    this.syncQueueKey = 'ucas-sync-queue';
+    this.lastSyncKey = 'ucas-last-sync';
+    
+    // Limits
+    this.maxSessions = 50; // localStorage limit
+    
+    // Sync state
+    this.syncInProgress = false;
+    this.syncQueue = this.loadSyncQueue();
+    
+    // Auto-sync every 30 seconds if changes pending
+    this.startAutoSync();
   }
 
   /**
-   * Save a research session
+   * Save a research session (hybrid: localStorage + Supabase queue)
    */
-  save(sessionData) {
+  async save(sessionData) {
     try {
       const session = {
         id: `research_${Date.now()}`,
@@ -34,31 +66,31 @@ export class ResearchMemory {
         }
       };
 
-      // Get existing sessions
-      const sessions = this.list();
-
-      // Add new session at beginning (most recent first)
+      // 1. Save to localStorage IMMEDIATELY (instant, no waiting)
+      const sessions = this.listLocal();
       sessions.unshift(session);
-
-      // Limit to maxSessions
       if (sessions.length > this.maxSessions) {
         sessions.splice(this.maxSessions);
       }
-
-      // Save to localStorage
       localStorage.setItem(this.storageKey, JSON.stringify(sessions));
+      console.log(`💾 localStorage: Saved ${session.id}`);
 
-      console.log(`💾 Research session saved: ${session.id}`);
+      // 2. Queue for Supabase sync (background, async)
+      if (isAuthenticated()) {
+        this.addToSyncQueue({ action: 'save', session });
+        this.syncToSupabase(); // Start sync (non-blocking)
+      } else {
+        console.log('⚠️ Not authenticated - localStorage only (will sync after login)');
+      }
+
       return session.id;
 
     } catch (error) {
       console.error('❌ Error saving research session:', error);
       
-      // Check if quota exceeded
       if (error.name === 'QuotaExceededError') {
         console.warn('⚠️ localStorage quota exceeded - removing oldest sessions');
         this.cleanup();
-        // Try again
         return this.save(sessionData);
       }
       
@@ -67,11 +99,31 @@ export class ResearchMemory {
   }
 
   /**
-   * Load a specific research session
+   * Load a specific research session (Supabase first, localStorage fallback)
    */
-  load(sessionId) {
+  async load(sessionId) {
     try {
-      const sessions = this.list();
+      // 1. Try Supabase first (get latest from any device)
+      if (isAuthenticated() && isOnline()) {
+        const { data, error } = await supabase
+          .from('research_sessions')
+          .select('*')
+          .eq('id', sessionId)
+          .is('deleted_at', null)
+          .single();
+
+        if (!error && data) {
+          console.log(`☁️ Supabase: Loaded ${sessionId}`);
+          return this.mapSupabaseToLocal(data);
+        }
+
+        if (error && error.code !== 'PGRST116') { // PGRST116 = not found
+          console.error('⚠️ Supabase load error:', error);
+        }
+      }
+
+      // 2. Fallback to localStorage
+      const sessions = this.listLocal();
       const session = sessions.find(s => s.id === sessionId);
 
       if (!session) {
@@ -79,7 +131,7 @@ export class ResearchMemory {
         return null;
       }
 
-      console.log(`📂 Research session loaded: ${sessionId}`);
+      console.log(`📂 localStorage: Loaded ${sessionId}`);
       return session;
 
     } catch (error) {
@@ -89,9 +141,41 @@ export class ResearchMemory {
   }
 
   /**
-   * List all research sessions
+   * List all research sessions (Supabase first, localStorage fallback)
    */
-  list() {
+  async list() {
+    try {
+      // 1. Try Supabase first (get latest from any device)
+      if (isAuthenticated() && isOnline()) {
+        const { data, error } = await supabase
+          .from('research_sessions')
+          .select('*')
+          .is('deleted_at', null)
+          .order('timestamp', { ascending: false });
+
+        if (!error && data) {
+          console.log(`☁️ Supabase: Loaded ${data.length} sessions`);
+          return data.map(s => this.mapSupabaseToLocal(s));
+        }
+
+        if (error) {
+          console.error('⚠️ Supabase list error:', error);
+        }
+      }
+
+      // 2. Fallback to localStorage
+      return this.listLocal();
+
+    } catch (error) {
+      console.error('❌ Error listing research sessions:', error);
+      return this.listLocal();
+    }
+  }
+
+  /**
+   * List sessions from localStorage only (internal use)
+   */
+  listLocal() {
     try {
       const data = localStorage.getItem(this.storageKey);
       if (!data) {
@@ -112,13 +196,13 @@ export class ResearchMemory {
   }
 
   /**
-   * Delete a specific research session
+   * Delete a specific research session (soft delete in Supabase)
    */
-  delete(sessionId) {
+  async delete(sessionId) {
     try {
-      let sessions = this.list();
+      // 1. Delete from localStorage immediately
+      let sessions = this.listLocal();
       const initialLength = sessions.length;
-
       sessions = sessions.filter(s => s.id !== sessionId);
 
       if (sessions.length === initialLength) {
@@ -127,7 +211,14 @@ export class ResearchMemory {
       }
 
       localStorage.setItem(this.storageKey, JSON.stringify(sessions));
-      console.log(`🗑️ Research session deleted: ${sessionId}`);
+      console.log(`🗑️ localStorage: Deleted ${sessionId}`);
+
+      // 2. Queue for Supabase sync (soft delete)
+      if (isAuthenticated()) {
+        this.addToSyncQueue({ action: 'delete', sessionId });
+        this.syncToSupabase(); // Start sync (non-blocking)
+      }
+
       return true;
 
     } catch (error) {
@@ -151,21 +242,61 @@ export class ResearchMemory {
   }
 
   /**
-   * Get session count
+   * Get session count (Supabase first, localStorage fallback)
    */
-  count() {
-    return this.list().length;
+  async count() {
+    if (isAuthenticated() && isOnline()) {
+      try {
+        const { count, error } = await supabase
+          .from('research_sessions')
+          .select('*', { count: 'exact', head: true })
+          .is('deleted_at', null);
+
+        if (!error) {
+          return count || 0;
+        }
+      } catch (error) {
+        console.error('⚠️ Supabase count error:', error);
+      }
+    }
+
+    return this.listLocal().length;
   }
 
   /**
-   * Get storage usage estimate
+   * Get storage usage estimate (Supabase first, localStorage fallback)
    */
-  getStorageSize() {
+  async getStorageSize() {
+    // Supabase storage usage
+    if (isAuthenticated() && isOnline()) {
+      try {
+        const { data, error } = await supabase.rpc('get_storage_usage', {
+          target_user_id: getUserId()
+        });
+
+        if (!error && data !== null) {
+          const sizeBytes = data;
+          const sizeKB = (sizeBytes / 1024).toFixed(2);
+          const sizeMB = (sizeBytes / 1024 / 1024).toFixed(2);
+
+          return {
+            bytes: sizeBytes,
+            kb: sizeKB,
+            mb: sizeMB,
+            formatted: sizeBytes > 1024 * 1024 ? `${sizeMB} MB` : `${sizeKB} KB`,
+            source: 'supabase'
+          };
+        }
+      } catch (error) {
+        console.error('⚠️ Supabase storage error:', error);
+      }
+    }
+
+    // localStorage fallback
     try {
       const data = localStorage.getItem(this.storageKey);
-      if (!data) return 0;
+      if (!data) return { bytes: 0, kb: 0, mb: 0, formatted: '0 KB', source: 'localStorage' };
 
-      // Estimate size in bytes
       const sizeBytes = new Blob([data]).size;
       const sizeKB = (sizeBytes / 1024).toFixed(2);
       const sizeMB = (sizeBytes / 1024 / 1024).toFixed(2);
@@ -174,12 +305,13 @@ export class ResearchMemory {
         bytes: sizeBytes,
         kb: sizeKB,
         mb: sizeMB,
-        formatted: sizeBytes > 1024 * 1024 ? `${sizeMB} MB` : `${sizeKB} KB`
+        formatted: sizeBytes > 1024 * 1024 ? `${sizeMB} MB` : `${sizeKB} KB`,
+        source: 'localStorage'
       };
 
     } catch (error) {
       console.error('❌ Error calculating storage size:', error);
-      return { bytes: 0, kb: 0, mb: 0, formatted: '0 KB' };
+      return { bytes: 0, kb: 0, mb: 0, formatted: '0 KB', source: 'error' };
     }
   }
 
@@ -273,20 +405,284 @@ export class ResearchMemory {
   /**
    * Get recent sessions (last N)
    */
-  getRecent(count = 10) {
-    const sessions = this.list();
+  async getRecent(count = 10) {
+    const sessions = await this.list();
     return sessions.slice(0, count);
   }
 
   /**
-   * Search sessions by query text
+   * Search sessions by query text (Supabase full-text search first, localStorage fallback)
    */
-  search(searchText) {
-    const sessions = this.list();
+  async search(searchText) {
+    // Supabase full-text search
+    if (isAuthenticated() && isOnline()) {
+      try {
+        const { data, error } = await supabase.rpc('search_research', {
+          target_user_id: getUserId(),
+          search_query: searchText
+        });
+
+        if (!error && data) {
+          console.log(`☁️ Supabase: Found ${data.length} results for "${searchText}"`);
+          return data.map(s => this.mapSupabaseToLocal(s));
+        }
+      } catch (error) {
+        console.error('⚠️ Supabase search error:', error);
+      }
+    }
+
+    // localStorage fallback
+    const sessions = this.listLocal();
     const lowerSearch = searchText.toLowerCase();
 
     return sessions.filter(session => 
       session.query.toLowerCase().includes(lowerSearch)
     );
+  }
+
+  // ============================================================================
+  // SUPABASE SYNC METHODS
+  // ============================================================================
+
+  /**
+   * Sync localStorage to Supabase (background, non-blocking)
+   */
+  async syncToSupabase() {
+    // Don't sync if already in progress, offline, or not authenticated
+    if (this.syncInProgress || !isOnline() || !isAuthenticated()) {
+      return;
+    }
+
+    try {
+      this.syncInProgress = true;
+      setSyncStatus(SyncStatus.SYNCING);
+
+      const queue = this.loadSyncQueue();
+      if (queue.length === 0) {
+        setSyncStatus(SyncStatus.SYNCED);
+        this.syncInProgress = false;
+        return;
+      }
+
+      console.log(`🔄 Syncing ${queue.length} operations to Supabase...`);
+
+      // Process queue
+      for (const operation of queue) {
+        try {
+          if (operation.action === 'save') {
+            await this.syncSaveToSupabase(operation.session);
+          } else if (operation.action === 'delete') {
+            await this.syncDeleteToSupabase(operation.sessionId);
+          }
+        } catch (error) {
+          console.error('⚠️ Sync operation failed:', operation, error);
+          // Continue with other operations
+        }
+      }
+
+      // Clear queue on success
+      this.clearSyncQueue();
+      this.updateLastSync();
+      setSyncStatus(SyncStatus.SYNCED);
+      console.log('✅ Sync complete');
+
+    } catch (error) {
+      console.error('❌ Sync error:', error);
+      setSyncStatus(SyncStatus.ERROR);
+    } finally {
+      this.syncInProgress = false;
+    }
+  }
+
+  /**
+   * Sync a save operation to Supabase
+   */
+  async syncSaveToSupabase(session) {
+    const supabaseSession = this.mapLocalToSupabase(session);
+
+    const { error } = await supabase
+      .from('research_sessions')
+      .upsert(supabaseSession, { onConflict: 'id' });
+
+    if (error) {
+      throw error;
+    }
+
+    console.log(`☁️ Supabase: Synced ${session.id}`);
+  }
+
+  /**
+   * Sync a delete operation to Supabase (soft delete)
+   */
+  async syncDeleteToSupabase(sessionId) {
+    const { error } = await supabase
+      .from('research_sessions')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id', sessionId);
+
+    if (error) {
+      throw error;
+    }
+
+    console.log(`☁️ Supabase: Soft deleted ${sessionId}`);
+  }
+
+  /**
+   * Pull all sessions from Supabase and merge with localStorage
+   */
+  async pullFromSupabase() {
+    if (!isAuthenticated() || !isOnline()) {
+      console.warn('⚠️ Cannot pull from Supabase - offline or not authenticated');
+      return;
+    }
+
+    try {
+      setSyncStatus(SyncStatus.SYNCING);
+
+      const { data, error } = await supabase
+        .from('research_sessions')
+        .select('*')
+        .is('deleted_at', null)
+        .order('timestamp', { ascending: false });
+
+      if (error) {
+        throw error;
+      }
+
+      console.log(`☁️ Supabase: Pulled ${data.length} sessions`);
+
+      // Merge with localStorage (Supabase wins on conflicts)
+      const localSessions = this.listLocal();
+      const supabaseSessions = data.map(s => this.mapSupabaseToLocal(s));
+
+      // Create merged list (deduplicate by ID, prefer Supabase version)
+      const mergedMap = new Map();
+
+      localSessions.forEach(s => mergedMap.set(s.id, s));
+      supabaseSessions.forEach(s => mergedMap.set(s.id, s)); // Overwrites local
+
+      const merged = Array.from(mergedMap.values());
+      merged.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+      // Save merged list to localStorage
+      if (merged.length > this.maxSessions) {
+        merged.splice(this.maxSessions);
+      }
+      localStorage.setItem(this.storageKey, JSON.stringify(merged));
+
+      this.updateLastSync();
+      setSyncStatus(SyncStatus.SYNCED);
+      console.log(`✅ Merged ${merged.length} sessions (${supabaseSessions.length} from cloud, ${localSessions.length} from local)`);
+
+    } catch (error) {
+      console.error('❌ Pull error:', error);
+      setSyncStatus(SyncStatus.ERROR);
+    }
+  }
+
+  /**
+   * Full sync: Pull from Supabase, then push any local changes
+   */
+  async fullSync() {
+    await this.pullFromSupabase();
+    await this.syncToSupabase();
+  }
+
+  // ============================================================================
+  // SYNC QUEUE MANAGEMENT
+  // ============================================================================
+
+  /**
+   * Add operation to sync queue
+   */
+  addToSyncQueue(operation) {
+    const queue = this.loadSyncQueue();
+    queue.push(operation);
+    localStorage.setItem(this.syncQueueKey, JSON.stringify(queue));
+  }
+
+  /**
+   * Load sync queue from localStorage
+   */
+  loadSyncQueue() {
+    try {
+      const data = localStorage.getItem(this.syncQueueKey);
+      return data ? JSON.parse(data) : [];
+    } catch (error) {
+      console.error('❌ Error loading sync queue:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Clear sync queue
+   */
+  clearSyncQueue() {
+    localStorage.setItem(this.syncQueueKey, JSON.stringify([]));
+  }
+
+  /**
+   * Update last sync timestamp
+   */
+  updateLastSync() {
+    localStorage.setItem(this.lastSyncKey, new Date().toISOString());
+  }
+
+  /**
+   * Get last sync timestamp
+   */
+  getLastSync() {
+    const timestamp = localStorage.getItem(this.lastSyncKey);
+    return timestamp ? new Date(timestamp) : null;
+  }
+
+  /**
+   * Start auto-sync timer (every 30 seconds)
+   */
+  startAutoSync() {
+    setInterval(() => {
+      if (this.loadSyncQueue().length > 0) {
+        this.syncToSupabase();
+      }
+    }, 30000); // 30 seconds
+  }
+
+  // ============================================================================
+  // DATA MAPPING (localStorage ↔ Supabase)
+  // ============================================================================
+
+  /**
+   * Map localStorage format to Supabase format
+   */
+  mapLocalToSupabase(session) {
+    return {
+      id: session.id,
+      user_id: getUserId(),
+      query: session.query,
+      timestamp: session.timestamp,
+      personas: session.personas,
+      results: session.results,
+      extracted_content: session.extractedContent,
+      chunks: session.chunks,
+      analysis: session.analysis,
+      metadata: session.metadata
+    };
+  }
+
+  /**
+   * Map Supabase format to localStorage format
+   */
+  mapSupabaseToLocal(session) {
+    return {
+      id: session.id,
+      query: session.query,
+      timestamp: session.timestamp,
+      personas: session.personas || [],
+      results: session.results || [],
+      extractedContent: session.extracted_content || [],
+      chunks: session.chunks || [],
+      analysis: session.analysis || null,
+      metadata: session.metadata || {}
+    };
   }
 }
