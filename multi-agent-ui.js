@@ -244,6 +244,19 @@ class MultiAgentUIController {
     const selectAllBtn = document.getElementById('modal-select-all') || document.querySelector('.persona-select-all');
     const clearAllBtn = document.getElementById('modal-clear-all') || document.querySelector('.persona-clear-all');
     
+    // Recover Results Button
+    const recoverBtn = document.getElementById('recover-results-btn');
+    if (recoverBtn) {
+      recoverBtn.addEventListener('click', () => {
+        log('EVENT', '💾 CLICKED Recover Last Results Button');
+        this.recoverLastResults();
+      });
+      log('SUCCESS', 'Attached listener to recover button');
+    }
+    
+    // Check if there are saved results to recover
+    this.checkForSavedResults();
+    
     if (selectAllBtn) {
       selectAllBtn.addEventListener('click', () => {
         log('EVENT', '✓ CLICKED Select All Personas');
@@ -1062,9 +1075,60 @@ class MultiAgentUIController {
     try {
       log('SUCCESS', '✅ Query validated, starting research...');
       this.setLoading(true);
-      this.showLoadingState();
+      
+      // Show progress updates in results area
+      const resultsContainer = document.querySelector('.multi-agent-results');
+      let elapsed = 0;
+      let stage = '🔍 Searching multiple sources...';
+      
+      // Determine number of personas for progress display
+      const personaCount = this.selectedPersonas.length > 0 
+        ? this.selectedPersonas.length 
+        : 12;
+      
+      const updateProgress = () => {
+        if (resultsContainer) {
+          resultsContainer.innerHTML = `
+            <div class="research-progress">
+              <div class="progress-spinner">⏳</div>
+              <h3>Research in Progress</h3>
+              <div class="progress-stage">${stage}</div>
+              <div class="progress-time">Elapsed: ${elapsed}s</div>
+              <div class="progress-steps">
+                <div class="progress-step ${elapsed < 10 ? 'active' : 'done'}">📡 Search</div>
+                <div class="progress-step ${elapsed >= 10 && elapsed < 30 ? 'active' : elapsed >= 30 ? 'done' : ''}">📄 Extract</div>
+                <div class="progress-step ${elapsed >= 30 && elapsed < 150 ? 'active' : elapsed >= 150 ? 'done' : ''}">🤖 Analyze (${personaCount} experts)</div>
+                <div class="progress-step ${elapsed >= 150 ? 'active' : ''}">✍️ Synthesize</div>
+              </div>
+            </div>
+          `;
+        }
+      };
+      
+      updateProgress();
+      
+      const progressInterval = setInterval(() => {
+        elapsed += 1;
+        if (elapsed < 10) stage = '🔍 Searching multiple sources...';
+        else if (elapsed < 30) stage = '📄 Extracting content from articles...';
+        else if (elapsed < 60) stage = `🤖 Starting ${personaCount}-persona analysis (parallel)...`;
+        else if (elapsed < 150) stage = '💭 Expert analyses in progress (1-3 min)...';
+        else if (elapsed < 200) stage = '✍️ Synthesizing all perspectives...';
+        else stage = '⏳ Almost done, finalizing report...';
+        updateProgress();
+      }, 1000);
 
       log('API', `📨 Sending research query: "${query}"`);
+      
+      // Use selected personas or default to all if none selected
+      const personasToUse = this.selectedPersonas.length > 0 
+        ? this.selectedPersonas 
+        : null; // null = use all 12
+      
+      log('INFO', `🎯 Research will use ${personasToUse ? personasToUse.length : 12} personas`);
+      if (personasToUse) {
+        log('DEBUG', `Selected: ${personasToUse.join(', ')}`);
+      }
       
       const startAPITime = performance.now();
       const result = await this.client.research(query, {
@@ -1072,14 +1136,29 @@ class MultiAgentUIController {
         extractContent: true,  // Enable content extraction
         maxExtract: 5,         // Extract top 5 results
         analyze: true,         // Enable multi-agent analysis
-        selectedPersonas: null // Use all personas (or pass array to select specific ones)
+        selectedPersonas: personasToUse // Use selected personas
       });
+      
+      clearInterval(progressInterval);
+      
       const apiTime = performance.now() - startAPITime;
       
       log('PERF', `⚡ Research response received in ${(apiTime).toFixed(2)}ms`);
       log('SUCCESS', '✅ Research completed successfully');
       log('DEBUG', `Found ${result.results.length} results`);
       log('DEBUG', `Stats:`, result.stats);
+
+      // CRITICAL: Save to localStorage as backup
+      try {
+        localStorage.setItem('lastResearchResult', JSON.stringify({
+          query,
+          result,
+          timestamp: Date.now()
+        }));
+        log('SUCCESS', '💾 Results saved to localStorage as backup');
+      } catch (e) {
+        log('WARN', `⚠️ Could not save to localStorage: ${e.message}`);
+      }
 
       this.currentResult = result;
       this.displayResearchResults(result);
@@ -1327,6 +1406,48 @@ class MultiAgentUIController {
     html = html.replace(/<\/ul>\s*<\/p>/g, '</ul>');
     
     return html;
+  }
+
+  /**
+   * Check if there are saved results to recover
+   */
+  checkForSavedResults() {
+    const lastResult = localStorage.getItem('lastResearchResult');
+    const recoverBtn = document.getElementById('recover-results-btn');
+    if (lastResult && recoverBtn) {
+      recoverBtn.style.display = 'inline-block';
+      log('INFO', '💾 Saved results detected - showing recovery button');
+    }
+  }
+
+  /**
+   * Recover last research results from localStorage
+   */
+  recoverLastResults() {
+    log('EVENT', '💾 Attempting to recover last results');
+    const saved = localStorage.getItem('lastResearchResult');
+    if (!saved) {
+      alert('No saved results found');
+      return;
+    }
+
+    try {
+      const data = JSON.parse(saved);
+      const age = Date.now() - data.timestamp;
+      const ageMinutes = Math.floor(age / 60000);
+      
+      log('INFO', `Recovered results from ${ageMinutes} minutes ago`);
+      
+      // Show confirmation
+      if (confirm(`Recover research results from ${ageMinutes} minutes ago?\n\nQuery: "${data.query}"`)) {
+        // Display the recovered results
+        this.displayResearchResults(data.result);
+        log('SUCCESS', '✅ Results recovered successfully');
+      }
+    } catch (error) {
+      log('ERROR', `Failed to recover results: ${error.message}`);
+      alert(`Failed to recover results: ${error.message}`);
+    }
   }
 }
 
