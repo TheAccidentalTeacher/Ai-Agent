@@ -96,8 +96,14 @@ The original game editor is still fully functional:
    # Creates .env file with your API keys
    node server.cjs
    ```
-3. **Try It**: Open http://localhost:3000 and click 🤖 Multi-Agent Consortium
-4. **Read**: [PHASE_6_IMPLEMENTATION_PLAN.md](PHASE_6_IMPLEMENTATION_PLAN.md) for next steps
+3. **Set up Supabase** (for cloud sync - optional but recommended):
+   - Follow [PHASE_7_SETUP_GUIDE.md](PHASE_7_SETUP_GUIDE.md) (5 min)
+   - Enables multi-device access (desktop, laptop, tablet, mobile)
+   - Research sessions sync across all your devices
+   - Automatic backup to cloud (500MB free tier)
+   - Skip this to use localStorage only (single device)
+4. **Try It**: Open http://localhost:3000 and click 🤖 Multi-Agent Consortium
+5. **Read**: [PHASE_6_IMPLEMENTATION_PLAN.md](PHASE_6_IMPLEMENTATION_PLAN.md) for next steps
 
 ### For Users
 
