@@ -259,7 +259,7 @@ CREATE OR REPLACE FUNCTION search_research(
 RETURNS TABLE (
   id UUID,
   query TEXT,
-  timestamp TIMESTAMPTZ,
+  "timestamp" TIMESTAMPTZ,
   personas TEXT[],
   metadata JSONB,
   rank REAL
@@ -267,7 +267,7 @@ RETURNS TABLE (
   SELECT 
     id,
     query,
-    timestamp,
+    "timestamp",
     personas,
     metadata,
     ts_rank(search_vector, to_tsquery('english', search_query)) AS rank
@@ -275,7 +275,7 @@ RETURNS TABLE (
   WHERE user_id = target_user_id
     AND deleted_at IS NULL
     AND search_vector @@ to_tsquery('english', search_query)
-  ORDER BY rank DESC, timestamp DESC
+  ORDER BY rank DESC, "timestamp" DESC
   LIMIT 20;
 $$ LANGUAGE sql SECURITY DEFINER;
 
@@ -289,13 +289,13 @@ CREATE OR REPLACE VIEW recent_research AS
     id,
     user_id,
     query,
-    timestamp,
+    "timestamp",
     personas,
     metadata,
     created_at
   FROM research_sessions
   WHERE deleted_at IS NULL
-  ORDER BY timestamp DESC;
+  ORDER BY "timestamp" DESC;
 
 -- ============================================================================
 -- GRANTS: Ensure authenticated users can use functions
