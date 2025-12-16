@@ -3,37 +3,52 @@
 **Formerly: Universal Game Level Editor**  
 **Now: Multi-Agent AI Cognitive Amplification Platform**
 
-A next-generation cognitive amplification tool that combines multi-agent AI collaboration, deep research capabilities, and creative generation into one unified system. Built to replace ChatGPT, Perplexity, VS Code, and more with an integrated "Extended Mind" approach.
+A next-generation cognitive amplification tool that combines multi-agent AI collaboration, deep research capabilities, cloud sync, and OAuth authentication into one unified system. Built to replace ChatGPT, Perplexity, and more with an integrated "Extended Mind" approach.
+
+## 🚨 DEPLOYING TO PRODUCTION?
+
+**⚠️ CRITICAL**: Read [DEPLOYMENT_CHECKLIST.md](DEPLOYMENT_CHECKLIST.md) FIRST!
+
+You **MUST** update OAuth redirect URLs in Supabase, GitHub, and Google when deploying to Netlify or authentication will fail. The checklist has step-by-step instructions to prevent hours of debugging.
+
+---
 
 ## 🎯 What Is This?
 
 UCAS is a platform that amplifies your cognition through specialized AI agents working together. Think of it as having a team of 12 expert consultants (Master Teacher, Technical Architect, Strategist, Theologian, and more) who can:
 - Discuss complex topics collaboratively
-- Conduct deep research with citations
-- Create content (images, videos, audio)
-- Develop software end-to-end
-- Integrate with your productivity tools
+- Conduct deep research with citations and multi-agent analysis
+- Save research sessions to the cloud with multi-device sync
+- Sign in with GitHub or Google OAuth
+- Create content (planned: images, videos, audio)
+- Develop software end-to-end (planned)
+- Integrate with your productivity tools (planned)
 
-**Current Status**: Phase 5 Complete → Phase 6 Ready  
-**Development Time**: ~5 hours total (AI-assisted "vibe coding")  
-**Next Up**: Deep Research Engine (2-3 days)
+**Current Status**: Phase 7 Complete (Cloud Sync with OAuth) ✅  
+**Development Time**: ~15 hours total (AI-assisted rapid development)  
+**Next Up**: Phase 8 - YouTube & Video Intelligence (1-2 weeks)
 
 ## 📚 Documentation Hub
+
+**🚨 Deploying?** → Read [DEPLOYMENT_CHECKLIST.md](DEPLOYMENT_CHECKLIST.md) FIRST (OAuth setup)
 
 **New to UCAS?** → Start with [GETTING_STARTED.md](GETTING_STARTED.md) (15 min setup)
 
 **Essential Reading**:
 - 📖 [COGNITIVE_AMPLIFICATION_VISION.md](docs/COGNITIVE_AMPLIFICATION_VISION.md) - The big picture, philosophy, competitive analysis
-- 🏗️ [CURRENT_CAPABILITIES_INVENTORY.md](docs/CURRENT_CAPABILITIES_INVENTORY.md) - What works now (Phases 1-5)
+- 🏗️ [CURRENT_CAPABILITIES_INVENTORY.md](docs/CURRENT_CAPABILITIES_INVENTORY.md) - What works now (Phases 1-7)
 - 🔬 [RESEARCH_CAPABILITIES_SPEC.md](docs/RESEARCH_CAPABILITIES_SPEC.md) - Deep research system (Phase 6)
-- 🗺️ [FUTURE_CAPABILITIES_ROADMAP.md](docs/FUTURE_CAPABILITIES_ROADMAP.md) - What's coming next (Phases 6-11)
+- 🗺️ [FUTURE_CAPABILITIES_ROADMAP.md](docs/FUTURE_CAPABILITIES_ROADMAP.md) - What's coming next (Phases 8-13)
 - 🏛️ [TECHNICAL_ARCHITECTURE.md](docs/TECHNICAL_ARCHITECTURE.md) - How everything works
 - 🧭 [MASTER_INDEX.md](docs/MASTER_INDEX.md) - Navigation hub for all docs
+- 🤖 [docs/ai/CONTEXT_LOADER.md](docs/ai/CONTEXT_LOADER.md) - AI context loading guide
 
 **Implementation**:
-- 🎯 [PHASE_6_IMPLEMENTATION_PLAN.md](PHASE_6_IMPLEMENTATION_PLAN.md) - Next sprint (detailed day-by-day)
-- ✅ [PHASE_5_COMPLETE.md](docs/ai/PHASE_5_COMPLETE.md) - What we just shipped
+- 🚀 [DEPLOYMENT_CHECKLIST.md](DEPLOYMENT_CHECKLIST.md) - **CRITICAL for production**
+- ✅ [PHASE_7_COMPLETE.md](PHASE_7_COMPLETE.md) - Cloud sync & OAuth (just shipped)
+- ✅ [PHASE_6_WEEK_7-8_COMPLETE.md](PHASE_6_WEEK_7-8_COMPLETE.md) - Research memory & export
 - 📊 [PROJECT_STATUS.md](PROJECT_STATUS.md) - Current project state
+- 📊 [CURRENT_STATUS.md](CURRENT_STATUS.md) - Live development status
 
 ## ✨ Features
 
@@ -43,10 +58,11 @@ UCAS is a platform that amplifies your cognition through specialized AI agents w
 - Core Council: Master Teacher, Classical Educator, Strategist, Theologian
 - Specialists: Technical Architect, Writer, Analyst, Debugger, UX Designer, Marketing Strategist, Game Designer, Gen-Alpha Expert
 
-**Three Orchestration Modes**:
+**Four Orchestration Modes**:
 1. **Panel Mode** - Sequential responses from all agents
 2. **Consensus Mode** - Agents debate and reach agreement
-3. **Conversation Mode** - Turn-taking discussion with user interjections
+3. **Debate Mode** - Focused argumentation
+4. **Conversation Mode** - Turn-taking discussion with user interjections
 
 **Key Capabilities**:
 - 🧠 Agent memory system (remembers past conversations)
@@ -56,23 +72,37 @@ UCAS is a platform that amplifies your cognition through specialized AI agents w
 - 📊 Dynamic speaker selection and turn-taking
 - 💭 Context-aware responses building on previous turns
 
-### Phase 6: Deep Research Engine 🎯 STARTING NOW
+### Phase 6: Deep Research Engine ✅ COMPLETE
 
-**Coming in 2-3 days**:
-- 🔍 Multi-source search (Google, Tavily, Bing)
-- 📄 Smart content extraction (web scraping, readability)
-- 🧩 Intelligent chunking (semantic boundaries)
+**Perplexity-like research with multi-agent analysis**:
+- 🔍 Multi-source search (Tavily, Brave, Serper)
+- 📄 Smart content extraction (Mozilla Readability)
+- 🧩 Intelligent chunking (semantic boundaries, ~4000 tokens)
 - 🤖 Multi-agent analysis (12 personas analyze together)
-- 💾 Research memory (save sessions, export to Markdown)
-- 📊 Citation tracking (source attribution)
+- ✍️ Executive synthesis (Writer persona)
+- 💾 Research memory (save/load/export sessions)
+- 📊 Export to Markdown & JSON
+- 🎨 Beautiful collapsible UI with markdown rendering
 
-### Phases 7-11: The Full Vision 🔮 NEXT 3-4 MONTHS
+### Phase 7: Cloud Sync with OAuth ✅ COMPLETE
 
-- **Phase 7**: YouTube + video processing (transcripts, analysis)
-- **Phase 8**: Creative content (DALL-E, ElevenLabs, etc.)
-- **Phase 9**: Code editor + GitHub integration
-- **Phase 10**: Productivity integrations (Google Docs, Notion)
-- **Phase 11**: Advanced AI (reasoning models, fine-tuning)
+**Multi-device access with secure authentication**:
+- ☁️ Supabase PostgreSQL cloud database
+- 🔐 OAuth authentication (GitHub & Google, PKCE flow)
+- 👤 User profiles with avatars
+- 🔄 Auto-sync across all devices
+- 📵 Offline fallback to localStorage
+- 🔒 Row-Level Security (RLS) for data privacy
+- 🎨 Clean minimal UI (sign-in button, auth modal, profile dropdown)
+
+### Phases 8-13: The Full Vision 🔮 NEXT 6-12 MONTHS
+
+- **Phase 8**: YouTube + video processing (transcripts, analysis)
+- **Phase 9**: Creative content (DALL-E, Midjourney, ElevenLabs)
+- **Phase 10**: Code editor + development environment
+- **Phase 11**: Productivity integrations (Google Workspace, Microsoft Office)
+- **Phase 12**: Advanced AI (autonomous agents, persistent memory)
+- **Phase 13**: Scale & ecosystem (API, mobile apps, enterprise)
 
 **Full details**: [FUTURE_CAPABILITIES_ROADMAP.md](docs/FUTURE_CAPABILITIES_ROADMAP.md)
 

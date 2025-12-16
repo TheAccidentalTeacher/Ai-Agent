@@ -244,11 +244,21 @@ function toggleProfileDropdown() {
 // ============================================================================
 
 // Sign-in button
-signInBtn.addEventListener('click', showAuthModal);
+signInBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  console.log('🔓 Sign-in button clicked');
+  showAuthModal();
+});
 
 // OAuth provider buttons
-googleSignInBtn.addEventListener('click', handleGoogleSignIn);
-githubSignInBtn.addEventListener('click', handleGitHubSignIn);
+googleSignInBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  handleGoogleSignIn();
+});
+githubSignInBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  handleGitHubSignIn();
+});
 
 // Cancel auth modal
 cancelAuthBtn.addEventListener('click', hideAuthModal);
@@ -279,10 +289,13 @@ document.addEventListener('click', (e) => {
 // Listen for auth state changes
 onAuthStateChange((event, session) => {
   console.log('🔐 Auth state changed:', event);
+  console.log('   Session:', session?.user?.email || 'null');
+  console.log('   User ID:', session?.user?.id || 'null');
+  
   updateAuthUI();
   
   if (event === 'SIGNED_IN') {
-    console.log('✅ Signed in successfully');
+    console.log('✅ Signed in successfully as:', session.user.email);
   } else if (event === 'SIGNED_OUT') {
     console.log('👋 Signed out');
   }
@@ -298,6 +311,23 @@ onSyncStatusChange((status, lastSyncTime) => {
 // ============================================================================
 
 // Initialize UI on page load
-updateAuthUI();
+async function initializeAuth() {
+  // Don't check session immediately - let Supabase process OAuth callback first
+  // The auth state change listener will handle session detection automatically
+  console.log('✅ Auth UI initialized - waiting for auth state...');
+  
+  // Give Supabase a moment to process OAuth callback if present
+  setTimeout(async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) {
+      console.log('✅ Session detected after OAuth callback:', session.user.email);
+      updateAuthUI();
+    } else {
+      console.log('ℹ️ No session - user needs to sign in');
+      updateAuthUI();
+    }
+  }, 500);
+}
 
-console.log('✅ Auth UI initialized');
+// Run initialization
+initializeAuth();

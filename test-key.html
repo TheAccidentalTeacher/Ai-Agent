@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Key Test</title>
+    <meta name="supabase-url" content="https://kxctrosgcockwtrteizd.supabase.co">
+    <meta name="supabase-anon-key" content="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt4Y3Ryb3NnY29ja3d0cnRlaXpkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU3ODA4MzIsImV4cCI6MjA4MTM1NjgzMn0.F9yb5rkd9UMLL3e7fD4xYWEVgIJgVR8HpMDcG84SMPE">
+</head>
+<body style="background: #1a1a1a; color: #fff; font-family: monospace; padding: 20px;">
+    <h1>Supabase Key Test</h1>
+    <div id="results"></div>
+    
+    <script>
+        const url = document.querySelector('meta[name="supabase-url"]')?.content;
+        const key = document.querySelector('meta[name="supabase-anon-key"]')?.content;
+        
+        // Decode JWT payload
+        const parts = key.split('.');
+        const payload = parts[1];
+        const decoded = JSON.parse(atob(payload));
+        
+        const results = document.getElementById('results');
+        results.innerHTML = `
+            <h2>Configuration Loaded:</h2>
+            <p><strong>URL:</strong> ${url}</p>
+            <p><strong>Key (first 50 chars):</strong> ${key.substring(0, 50)}...</p>
+            <p><strong>Key (last 20 chars):</strong> ...${key.slice(-20)}</p>
+            
+            <h2>JWT Decoded:</h2>
+            <pre>${JSON.stringify(decoded, null, 2)}</pre>
+            
+            <h2>Token Info:</h2>
+            <p><strong>Project Ref:</strong> ${decoded.ref}</p>
+            <p><strong>Role:</strong> ${decoded.role}</p>
+            <p><strong>Issued At:</strong> ${new Date(decoded.iat * 1000).toLocaleString()}</p>
+            <p><strong>Expires:</strong> ${new Date(decoded.exp * 1000).toLocaleString()}</p>
+            <p><strong>Status:</strong> ${decoded.exp > Date.now() / 1000 ? '✅ VALID' : '❌ EXPIRED'}</p>
+            
+            <h2>Expected Values:</h2>
+            <p><strong>iat should be:</strong> 1765780832 (Dec 15, 2025)</p>
+            <p><strong>Actual iat:</strong> ${decoded.iat} ${decoded.iat === 1765780832 ? '✅ CORRECT' : '❌ WRONG - OLD KEY!'}</p>
+        `;
+        
+        console.log('URL:', url);
+        console.log('Key:', key);
+        console.log('Decoded:', decoded);
+    </script>
+</body>
+</html>

@@ -230,8 +230,10 @@ const server = http.createServer(async (req, res) => {
   // Serve static files
   console.log(`[${requestId}] 📄 Serving static file`);
   
-  let filePath = '.' + req.url;
-  if (filePath === './') {
+  // Strip query parameters from URL for file path
+  const urlPath = req.url.split('?')[0];
+  let filePath = '.' + urlPath;
+  if (filePath === './' || filePath === '.') {
     filePath = './index.html';
   }
 

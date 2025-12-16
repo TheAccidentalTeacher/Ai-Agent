@@ -311,22 +311,26 @@ GRANT SELECT ON recent_research TO authenticated;
 -- ============================================================================
 
 -- Function to create default preferences on user signup
-CREATE OR REPLACE FUNCTION create_default_preferences()
-RETURNS TRIGGER AS $$
-BEGIN
-  INSERT INTO user_preferences (user_id)
-  VALUES (NEW.id)
-  ON CONFLICT (user_id) DO NOTHING;
-  
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+-- DISABLED: This was causing OAuth sign-up failures
+-- Instead, preferences are created lazily when first accessed
+-- 
+-- CREATE OR REPLACE FUNCTION create_default_preferences()
+-- RETURNS TRIGGER AS $$
+-- BEGIN
+--   INSERT INTO user_preferences (user_id)
+--   VALUES (NEW.id)
+--   ON CONFLICT (user_id) DO NOTHING;
+--   
+--   RETURN NEW;
+-- END;
+-- $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Trigger: Create preferences when new user signs up
-CREATE TRIGGER on_auth_user_created
-  AFTER INSERT ON auth.users
-  FOR EACH ROW
-  EXECUTE FUNCTION create_default_preferences();
+-- DISABLED: See above
+-- CREATE TRIGGER on_auth_user_created
+--   AFTER INSERT ON auth.users
+--   FOR EACH ROW
+--   EXECUTE FUNCTION create_default_preferences();
 
 -- ============================================================================
 -- VERIFICATION QUERIES

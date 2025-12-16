@@ -33,7 +33,14 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 // Configuration from environment (loaded via meta tag in index.html)
 const SUPABASE_URL = document.querySelector('meta[name="supabase-url"]')?.content || 'https://kxctrosgcockwtrteizd.supabase.co';
-const SUPABASE_ANON_KEY = document.querySelector('meta[name="supabase-anon-key"]')?.content || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt4Y3Ryb3NnY29ja3d0cnRlaXpkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzczMTI2ODUsImV4cCI6MjA1Mjg4ODY4NX0.HN91ILPB7ZD_hKTZ3MDLzxsAH51ZC2rJQY7oc8U8BFk';
+const SUPABASE_ANON_KEY = document.querySelector('meta[name="supabase-anon-key"]')?.content || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt4Y3Ryb3NnY29ja3d0cnRlaXpkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU3ODA4MzIsImV4cCI6MjA4MTM1NjgzMn0.F9yb5rkd9UMLL3e7fD4xYWEVgIJgVR8HpMDcG84SMPE';
+
+// Check if this is an OAuth callback
+const urlHasOAuthTokens = window.location.hash.includes('access_token');
+if (urlHasOAuthTokens) {
+    console.log('🔐 OAuth callback detected in URL');
+    console.log('🔍 Hash params:', window.location.hash);
+}
 
 // Initialize Supabase client
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
@@ -41,12 +48,24 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
         // Store session in localStorage (persists across page reloads)
         persistSession: true,
         autoRefreshToken: true,
-        detectSessionInUrl: true
+        detectSessionInUrl: true,
+        // Use PKCE flow for OAuth (more secure, prevents token interception)
+        flowType: 'pkce',
+        // Store PKCE verifier in localStorage
+        storage: window.localStorage,
+        storageKey: 'supabase.auth.token',
+        // Debug mode to see what's happening
+        debug: true
     },
     db: {
         schema: 'public'
     }
 });
+
+// Log session exchange process
+if (urlHasOAuthTokens) {
+    console.log('⏳ Waiting for Supabase to exchange OAuth tokens...');
+}
 
 /**
  * Authentication State Management
@@ -59,6 +78,23 @@ let authStateListeners = [];
 // Initialize authentication state
 supabase.auth.onAuthStateChange((event, session) => {
     console.log('Auth state changed:', event, session?.user?.email);
+    
+    // Log detailed info for OAuth events
+    if (event === 'SIGNED_IN' && session) {
+        console.log('✅ Successfully signed in!');
+        console.log('   User:', session.user.email);
+        console.log('   Provider:', session.user.app_metadata?.provider);
+        console.log('   Session expires:', new Date(session.expires_at * 1000).toLocaleString());
+    }
+    
+    if (event === 'TOKEN_REFRESHED') {
+        console.log('🔄 Session token refreshed');
+    }
+    
+    if (event === 'SIGNED_OUT') {
+        console.log('👋 User signed out');
+    }
+    
     currentUser = session?.user || null;
     
     // Notify all listeners of auth state change
