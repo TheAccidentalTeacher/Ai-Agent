@@ -46,6 +46,11 @@ const videoBatchQuizFunction = require('./netlify/functions/video-batch-quiz.cjs
 const videoBatchVocabularyFunction = require('./netlify/functions/video-batch-vocabulary.cjs');
 const videoBatchStudyGuideFunction = require('./netlify/functions/video-batch-study-guide.cjs');
 
+// Phase 10: Import memory system handlers
+const memorySearchFunction = require('./netlify/functions/memory-search.cjs');
+const memorySaveFunction = require('./netlify/functions/memory-save.cjs');
+const memoryGraphFunction = require('./netlify/functions/memory-graph.cjs');
+
 // MIME types for static files
 const MIME_TYPES = {
   '.html': 'text/html',
@@ -771,6 +776,644 @@ const server = http.createServer(async (req, res) => {
       
       return;
     }
+
+    // Phase 9: Creative Studio endpoints
+    if (functionPath === 'creative-image') {
+      console.log(`[${requestId}] 🎨 Routing to creative-image endpoint`);
+      
+      let body = '';
+      req.on('data', chunk => {
+        body += chunk.toString();
+      });
+      
+      req.on('end', async () => {
+        try {
+          const settings = JSON.parse(body);
+          console.log(`[${requestId}] Image generation settings:`, settings);
+          
+          let result;
+          const model = settings.model || 'dall-e-3';
+          
+          // Route to appropriate API based on model selection
+          if (model === 'dall-e-3') {
+            // OpenAI DALL-E 3
+            console.log(`[${requestId}] 🎨 Generating with DALL-E 3...`);
+            
+            // Map dimensions to DALL-E 3 supported sizes
+            let size = '1024x1024';
+            if (settings.dimensions === '1024×768 (Landscape)' || settings.dimensions === '1024x768') {
+              size = '1792x1024';
+            } else if (settings.dimensions === '768×1024 (Portrait)' || settings.dimensions === '768x1024') {
+              size = '1024x1792';
+            }
+            
+            const response = await fetch('https://api.openai.com/v1/images/generations', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                model: 'dall-e-3',
+                prompt: settings.prompt,
+                size: size,
+                quality: 'hd',
+                n: 1
+              })
+            });
+            
+            const data = await response.json();
+            
+            if (!response.ok) {
+              throw new Error(data.error?.message || 'DALL-E 3 API error');
+            }
+            
+            result = {
+              success: true,
+              imageUrl: data.data[0].url,
+              revisedPrompt: data.data[0].revised_prompt,
+              model: 'DALL-E 3',
+              prompt: settings.prompt,
+              timestamp: new Date().toISOString()
+            };
+            
+          } else if (model === 'stable-diffusion' || model === 'flux-2' || model === 'dreamshaper') {
+            // Stability AI, Replicate Flux, or DreamShaper
+            const useStability = model === 'stable-diffusion';
+            const useDreamShaper = model === 'dreamshaper';
+            
+            if (useStability) {
+              console.log(`[${requestId}] 🎨 Generating with Stable Diffusion 3...`);
+              
+              const formData = new FormData();
+              formData.append('prompt', settings.prompt);
+              if (settings.negativePrompt) {
+                formData.append('negative_prompt', settings.negativePrompt);
+              }
+              formData.append('output_format', 'png');
+              formData.append('mode', 'text-to-image');
+              
+              const response = await fetch('https://api.stability.ai/v2beta/stable-image/generate/sd3', {
+                method: 'POST',
+                headers: {
+                  'Authorization': `Bearer ${process.env.STABILITY_AI_API_KEY}`
+                },
+                body: formData
+              });
+              
+              if (!response.ok) {
+                const errorText = await response.text();
+                console.error(`[${requestId}] Stability AI error:`, errorText);
+                throw new Error(`Stability AI error: ${response.status} ${errorText}`);
+              }
+              
+              const data = await response.json();
+              
+              result = {
+                success: true,
+                imageUrl: `data:image/png;base64,${data.image}`,
+                model: 'Stable Diffusion 3',
+                prompt: settings.prompt,
+                timestamp: new Date().toISOString()
+              };
+              
+            } else if (useDreamShaper) {
+              // DreamShaper via Replicate
+              console.log(`[${requestId}] 🎨 Generating with DreamShaper via Replicate...`);
+              
+              const response = await fetch('https://api.replicate.com/v1/predictions', {
+                method: 'POST',
+                headers: {
+                  'Authorization': `Bearer ${process.env.REPLICATE_API_TOKEN}`,
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                  version: 'ac732df83cea7fff18b8472768c88ad041fa750ff7682a21affe81863cbe77e4',
+                  input: {
+                    prompt: settings.prompt,
+                    negative_prompt: settings.negativePrompt || '',
+                    num_inference_steps: settings.steps || 20,
+                    guidance_scale: settings.guidance || 7.5,
+                    width: 1024,
+                    height: 1024
+                  }
+                })
+              });
+              
+              const data = await response.json();
+              console.log(`[${requestId}] 📊 DreamShaper initial prediction:`, JSON.stringify(data, null, 2));
+              
+              if (!response.ok) {
+                throw new Error(data.detail || 'Replicate DreamShaper API error');
+              }
+              
+              // Poll for result
+              let prediction = data;
+              let pollCount = 0;
+              while (prediction.status === 'starting' || prediction.status === 'processing') {
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                const pollResponse = await fetch(prediction.urls.get, {
+                  headers: {
+                    'Authorization': `Bearer ${process.env.REPLICATE_API_TOKEN}`
+                  }
+                });
+                prediction = await pollResponse.json();
+                pollCount++;
+                console.log(`[${requestId}] 🔄 Poll ${pollCount}: status=${prediction.status}`);
+              }
+              
+              console.log(`[${requestId}] ✅ DreamShaper final prediction:`, JSON.stringify(prediction, null, 2));
+              
+              if (prediction.status === 'failed') {
+                throw new Error(prediction.error || 'DreamShaper generation failed');
+              }
+              
+              if (!prediction.output) {
+                throw new Error(`No image URL in DreamShaper output: ${JSON.stringify(prediction)}`);
+              }
+              
+              const imageUrl = Array.isArray(prediction.output) ? prediction.output[0] : prediction.output;
+              
+              result = {
+                success: true,
+                imageUrl: imageUrl,
+                model: 'DreamShaper',
+                prompt: settings.prompt,
+                timestamp: new Date().toISOString()
+              };
+              
+            } else {
+              // Replicate Flux 2
+              console.log(`[${requestId}] 🎨 Generating with Flux 2 via Replicate...`);
+              
+              // Flux Pro has max guidance of 5
+              const guidance = Math.min(settings.guidance || 3.5, 5);
+              
+              const response = await fetch('https://api.replicate.com/v1/predictions', {
+                method: 'POST',
+                headers: {
+                  'Authorization': `Bearer ${process.env.REPLICATE_API_TOKEN}`,
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                  version: 'black-forest-labs/flux-pro',
+                  input: {
+                    prompt: settings.prompt,
+                    guidance: guidance,
+                    num_inference_steps: settings.steps || 20,
+                    width: 1024,
+                    height: 1024
+                  }
+                })
+              });
+              
+              const data = await response.json();
+              
+              console.log(`[${requestId}] 📊 Initial prediction:`, JSON.stringify(data, null, 2));
+              
+              if (!response.ok) {
+                throw new Error(data.detail || 'Replicate API error');
+              }
+              
+              // Poll for result
+              let prediction = data;
+              let pollCount = 0;
+              while (prediction.status === 'starting' || prediction.status === 'processing') {
+                await new Promise(resolve => setTimeout(resolve, 2000)); // 2 second intervals
+                const pollResponse = await fetch(prediction.urls.get, {
+                  headers: {
+                    'Authorization': `Bearer ${process.env.REPLICATE_API_TOKEN}`
+                  }
+                });
+                prediction = await pollResponse.json();
+                pollCount++;
+                console.log(`[${requestId}] 🔄 Poll ${pollCount}: status=${prediction.status}`);
+              }
+              
+              console.log(`[${requestId}] ✅ Final prediction:`, JSON.stringify(prediction, null, 2));
+              
+              if (prediction.status === 'failed') {
+                throw new Error(prediction.error || 'Generation failed');
+              }
+              
+              if (!prediction.output) {
+                throw new Error(`No image URL in prediction output: ${JSON.stringify(prediction)}`);
+              }
+              
+              // Flux Pro output is a single string URL, not an array
+              const imageUrl = Array.isArray(prediction.output) ? prediction.output[0] : prediction.output;
+              
+              result = {
+                success: true,
+                imageUrl: imageUrl,
+                model: 'Flux 2 Pro',
+                prompt: settings.prompt,
+                timestamp: new Date().toISOString()
+              };
+            }
+            
+          } else {
+            // Fallback for unknown models
+            throw new Error(`Unsupported model: ${model}`);
+          }
+          
+          const duration = Date.now() - startTime;
+          console.log(`[${requestId}] ✅ Creative image completed in ${duration}ms`);
+          
+          res.writeHead(200, {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*'
+          });
+          res.end(JSON.stringify(result));
+          
+        } catch (error) {
+          const duration = Date.now() - startTime;
+          console.error(`[${requestId}] ❌ Creative image error after ${duration}ms:`, error);
+          
+          res.writeHead(500, {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*'
+          });
+          res.end(JSON.stringify({
+            error: 'Image generation failed',
+            message: error.message,
+            requestId: requestId
+          }));
+        }
+      });
+      
+      return;
+    }
+    
+    // ===== CREATIVE AUDIO ENDPOINT =====
+    if (functionPath === 'creative-audio') {
+      // Import the creative-audio function handler
+      const creativeAudioModule = require('./netlify/functions/creative-audio.cjs');
+      
+      let body = '';
+      req.on('data', chunk => body += chunk.toString());
+      req.on('end', async () => {
+        try {
+          const event = {
+            httpMethod: 'POST',
+            body: body,
+            headers: req.headers
+          };
+          
+          const response = await creativeAudioModule.handler(event);
+          
+          res.writeHead(response.statusCode || 200, {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*'
+          });
+          res.end(response.body);
+          
+        } catch (error) {
+          console.error('❌ Creative audio error:', error);
+          
+          res.writeHead(500, {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*'
+          });
+          res.end(JSON.stringify({
+            error: 'Audio generation failed',
+            message: error.message
+          }));
+        }
+      });
+      
+      return;
+    }
+    
+    // ===== CREATIVE MUSIC ENDPOINT =====
+    if (functionPath === 'creative-music') {
+      const requestId = Date.now().toString().slice(-6);
+      const startTime = Date.now();
+      console.log(`[${requestId}] 🎵 Creative music request received`);
+      
+      let body = '';
+      req.on('data', chunk => body += chunk.toString());
+      req.on('end', async () => {
+        try {
+          const settings = JSON.parse(body);
+          console.log(`[${requestId}] Settings:`, settings);
+          
+          const model = settings.model || 'MusicGen (Free)';
+          let result;
+          
+          if (model === 'MusicGen (Free)' || model === 'Lyria Lite (Fast)') {
+            console.log(`[${requestId}] 🎵 Generating with MusicGen (Meta)...`);
+            
+            const response = await fetch('https://api.replicate.com/v1/predictions', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${process.env.REPLICATE_API_TOKEN}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                version: 'meta/musicgen',
+                input: {
+                  prompt: settings.prompt,
+                  duration: settings.duration || 30,
+                  temperature: 1.0,
+                  top_k: 250,
+                  top_p: 0.0,
+                  classifier_free_guidance: 3
+                }
+              })
+            });
+            
+            const data = await response.json();
+            if (!response.ok) {
+              throw new Error(data.detail || 'Replicate API error');
+            }
+            
+            // Poll for result
+            let prediction = data;
+            while (prediction.status === 'starting' || prediction.status === 'processing') {
+              await new Promise(resolve => setTimeout(resolve, 1500));
+              const pollResponse = await fetch(prediction.urls.get, {
+                headers: {
+                  'Authorization': `Bearer ${process.env.REPLICATE_API_TOKEN}`
+                }
+              });
+              prediction = await pollResponse.json();
+            }
+            
+            if (prediction.status === 'failed') {
+              throw new Error(prediction.error || 'Generation failed');
+            }
+            
+            result = {
+              success: true,
+              audioUrl: prediction.output,
+              model: 'MusicGen (Meta)',
+              prompt: settings.prompt,
+              duration: settings.duration || 30,
+              timestamp: new Date().toISOString()
+            };
+          } else {
+            throw new Error(`Unsupported model: ${model}`);
+          }
+          
+          const duration = Date.now() - startTime;
+          console.log(`[${requestId}] ✅ Creative music completed in ${duration}ms`);
+          
+          res.writeHead(200, {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*'
+          });
+          res.end(JSON.stringify(result));
+          
+        } catch (error) {
+          const duration = Date.now() - startTime;
+          console.error(`[${requestId}] ❌ Creative music error after ${duration}ms:`, error);
+          
+          res.writeHead(500, {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*'
+          });
+          res.end(JSON.stringify({
+            error: 'Music generation failed',
+            message: error.message,
+            requestId: requestId
+          }));
+        }
+      });
+      
+      return;
+    }
+    
+    // ===== CREATIVE VIDEO ENDPOINT =====
+    if (functionPath === 'creative-video') {
+      const requestId = Date.now().toString().slice(-6);
+      const startTime = Date.now();
+      console.log(`[${requestId}] 🎬 Creative video request received`);
+      
+      let body = '';
+      req.on('data', chunk => body += chunk.toString());
+      req.on('end', async () => {
+        try {
+          const settings = JSON.parse(body);
+          console.log(`[${requestId}] Settings:`, settings);
+          
+          const model = settings.model || 'Zeroscope v2 (Free)';
+          let result;
+          
+          if (model === 'Zeroscope v2 (Free)' || model === 'Veo 2 (Fast)') {
+            console.log(`[${requestId}] 🎬 Generating with Zeroscope v2 XL...`);
+            
+            const response = await fetch('https://api.replicate.com/v1/predictions', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${process.env.REPLICATE_API_TOKEN}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                version: 'anotherjesse/zeroscope-v2-xl',
+                input: {
+                  prompt: settings.prompt,
+                  num_frames: settings.duration === 3 ? 24 : (settings.duration === 5 ? 40 : 24),
+                  fps: settings.fps || 24,
+                  width: 576,
+                  height: 320,
+                  num_inference_steps: 50
+                }
+              })
+            });
+            
+            const data = await response.json();
+            if (!response.ok) {
+              throw new Error(data.detail || 'Replicate API error');
+            }
+            
+            // Poll for result (video takes longer)
+            let prediction = data;
+            while (prediction.status === 'starting' || prediction.status === 'processing') {
+              await new Promise(resolve => setTimeout(resolve, 2000));
+              const pollResponse = await fetch(prediction.urls.get, {
+                headers: {
+                  'Authorization': `Bearer ${process.env.REPLICATE_API_TOKEN}`
+                }
+              });
+              prediction = await pollResponse.json();
+            }
+            
+            if (prediction.status === 'failed') {
+              throw new Error(prediction.error || 'Generation failed');
+            }
+            
+            result = {
+              success: true,
+              videoUrl: prediction.output,
+              model: 'Zeroscope v2 XL',
+              prompt: settings.prompt,
+              duration: settings.duration || 3,
+              timestamp: new Date().toISOString()
+            };
+          } else {
+            throw new Error(`Unsupported model: ${model}`);
+          }
+          
+          const duration = Date.now() - startTime;
+          console.log(`[${requestId}] ✅ Creative video completed in ${duration}ms`);
+          
+          res.writeHead(200, {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*'
+          });
+          res.end(JSON.stringify(result));
+          
+        } catch (error) {
+          const duration = Date.now() - startTime;
+          console.error(`[${requestId}] ❌ Creative video error after ${duration}ms:`, error);
+          
+          res.writeHead(500, {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*'
+          });
+          res.end(JSON.stringify({
+            error: 'Video generation failed',
+            message: error.message,
+            requestId: requestId
+          }));
+        }
+      });
+      
+      return;
+    }
+    
+    // ===== PHASE 10: MEMORY SEARCH ENDPOINT =====
+    if (functionPath === 'memory-search') {
+      console.log(`[${requestId}] 🔍 Memory search request received`);
+      
+      let body = '';
+      req.on('data', chunk => body += chunk.toString());
+      req.on('end', async () => {
+        try {
+          const event = {
+            httpMethod: req.method,
+            headers: req.headers,
+            body: body
+          };
+          
+          const result = await memorySearchFunction.handler(event);
+          
+          const duration = Date.now() - startTime;
+          console.log(`[${requestId}] ✅ Memory search completed in ${duration}ms`);
+          
+          res.writeHead(result.statusCode || 200, {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Headers': 'Content-Type'
+          });
+          res.end(result.body);
+        } catch (error) {
+          const duration = Date.now() - startTime;
+          console.error(`[${requestId}] ❌ Memory search error after ${duration}ms:`, error);
+          
+          res.writeHead(500, {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*'
+          });
+          res.end(JSON.stringify({
+            error: 'Memory search failed',
+            message: error.message,
+            requestId: requestId
+          }));
+        }
+      });
+      
+      return;
+    }
+    
+    // ===== PHASE 10: MEMORY SAVE ENDPOINT =====
+    if (functionPath === 'memory-save') {
+      console.log(`[${requestId}] 💾 Memory save request received`);
+      
+      let body = '';
+      req.on('data', chunk => body += chunk.toString());
+      req.on('end', async () => {
+        try {
+          const event = {
+            httpMethod: req.method,
+            headers: req.headers,
+            body: body
+          };
+          
+          const result = await memorySaveFunction.handler(event);
+          
+          const duration = Date.now() - startTime;
+          console.log(`[${requestId}] ✅ Memory save completed in ${duration}ms`);
+          
+          res.writeHead(result.statusCode || 200, {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Headers': 'Content-Type'
+          });
+          res.end(result.body);
+        } catch (error) {
+          const duration = Date.now() - startTime;
+          console.error(`[${requestId}] ❌ Memory save error after ${duration}ms:`, error);
+          
+          res.writeHead(500, {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*'
+          });
+          res.end(JSON.stringify({
+            error: 'Memory save failed',
+            message: error.message,
+            requestId: requestId
+          }));
+        }
+      });
+      
+      return;
+    }
+    
+    // ===== PHASE 10 WEEK 3: MEMORY GRAPH ENDPOINT =====
+    if (functionPath === 'memory-graph') {
+      console.log(`[${requestId}] 🔗 Memory graph request received`);
+      
+      let body = '';
+      req.on('data', chunk => body += chunk.toString());
+      req.on('end', async () => {
+        try {
+          const event = {
+            httpMethod: req.method,
+            headers: req.headers,
+            body: body
+          };
+          
+          const result = await memoryGraphFunction.handler(event);
+          
+          const duration = Date.now() - startTime;
+          console.log(`[${requestId}] ✅ Memory graph completed in ${duration}ms`);
+          
+          res.writeHead(result.statusCode || 200, {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Headers': 'Content-Type'
+          });
+          res.end(result.body);
+        } catch (error) {
+          const duration = Date.now() - startTime;
+          console.error(`[${requestId}] ❌ Memory graph error after ${duration}ms:`, error);
+          
+          res.writeHead(500, {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*'
+          });
+          res.end(JSON.stringify({
+            error: 'Memory graph failed',
+            message: error.message,
+            requestId: requestId
+          }));
+        }
+      });
+      
+      return;
+    }
   }
 
   // Serve static files
@@ -833,6 +1476,10 @@ server.listen(PORT, () => {
   console.log('📦 BATCH: /api/video-batch-quiz (Phase 8 Week 4 - Combined Quiz)');
   console.log('📦 BATCH: /api/video-batch-vocabulary (Phase 8 Week 4 - Master Vocabulary)');
   console.log('📦 BATCH: /api/video-batch-study-guide (Phase 8 Week 4 - Unit Study Guide)');
+  console.log('');
+  console.log('🧠 PHASE 10: /api/memory-search (Memory & Knowledge Management)');
+  console.log('🧠 PHASE 10: /api/memory-save (Save with Auto-embeddings + Tags)');
+  console.log('🔗 PHASE 10 WEEK 3: /api/memory-graph (Knowledge Graph Visualization)');
   console.log('');
   console.log('Press Ctrl+C to stop');
   console.log('='.repeat(80) + '\n');

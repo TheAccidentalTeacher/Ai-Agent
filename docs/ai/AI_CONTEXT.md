@@ -1,7 +1,27 @@
 # AI Context Document
-**Last Updated**: December 11, 2025  
-**Version**: 1.0.0  
+**Last Updated**: December 21, 2025  
+**Version**: 2.4.0  
 **Purpose**: Core orientation document for AI assistants working on this project
+
+---
+
+## 📚 Complete User Documentation
+
+**NEW!** For comprehensive user-facing documentation, see:
+👉 **[USER_GUIDE.md](../../USER_GUIDE.md)** - Complete guide for end users (150+ pages)
+
+This guide explains:
+- What the application does (in simple terms)
+- How to use every feature (with examples)
+- All 12 AI personas and when to use them
+- Video Intelligence tools (7 content creation tools)
+- Creative Studio (image, audio, music, video generation)
+- Deep Research Engine (multi-agent analysis)
+- Memory & Knowledge Management (auto-save + graph)
+- 100+ example prompts and workflows
+- Troubleshooting and FAQ
+
+**When helping users:** Direct them to USER_GUIDE.md for detailed explanations.
 
 ---
 
@@ -12,7 +32,8 @@
 2. Read [`ARCHITECTURE.md`](../technical/ARCHITECTURE.md) for system design
 3. Read [`API_REFERENCE.md`](../technical/API_REFERENCE.md) for code structure
 4. Check [`CHANGELOG.md`](../CHANGELOG.md) for recent changes
-5. Review open issues/user request context
+5. Review [`CURRENT_STATUS.md`](../../CURRENT_STATUS.md) for latest features
+6. Check [`USER_GUIDE.md`](../../USER_GUIDE.md) when users ask "how do I..."
 
 ### Project Identity
 - **Name**: Universal Game Level Editor

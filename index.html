@@ -10,6 +10,9 @@
     <meta name="supabase-url" content="https://kxctrosgcockwtrteizd.supabase.co">
     <meta name="supabase-anon-key" content="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt4Y3Ryb3NnY29ja3d0cnRlaXpkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU3ODA4MzIsImV4cCI6MjA4MTM1NjgzMn0.F9yb5rkd9UMLL3e7fD4xYWEVgIJgVR8HpMDcG84SMPE">
     
+    <!-- Favicon (inline to avoid 404) -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎮</text></svg>">
+    
     <link rel="stylesheet" href="style.css">
     <script src="tooltip.js"></script>
 </head>
@@ -25,6 +28,7 @@
                 <button id="save-project" title="Save project file (Ctrl+S)">📁 Save Project</button>
                 <button id="load-project" title="Load project file (Ctrl+O)">📂 Load Project</button>
                 <button id="clear-all" title="Clear everything">🗑️ Clear All</button>
+                <button id="help-btn" title="Open Help Guide" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; font-weight: 600; border: none;">📚 Help</button>
                 
                 <!-- Authentication UI -->
                 <div id="auth-container" style="margin-left: auto; display: flex; align-items: center; gap: 10px;">
@@ -176,6 +180,7 @@
                         <button id="ai-restore" class="icon-btn" title="Restore checkpoint" style="display: none;">↩️</button>
                         <button id="ai-settings" class="icon-btn" title="Configure AI settings">⚙️</button>
                         <button id="show-multi-agent" class="icon-btn" title="Show multi-agent consortium">🤖</button>
+                        <button id="show-creative-studio" class="icon-btn" title="Creative Studio - Generate AI content">🎨</button>
                         <button id="ai-clear" class="icon-btn" title="Clear conversation">🗑️</button>
                         <button id="ai-toggle" class="icon-btn" title="Close AI panel">×</button>
                     </div>
@@ -404,6 +409,12 @@
     
     <script src="editor.js"></script>
     <script type="module" src="multi-agent-ui.js"></script>
+    <script type="module">
+        // Cache-busting for Creative Studio module
+        import(`./creative-studio-ui.js?v=${Date.now()}`).catch(err => {
+            console.error('Failed to load Creative Studio:', err);
+        });
+    </script>
     
     <!-- Fallback initialization for multi-agent UI -->
     <script>
@@ -587,6 +598,23 @@
                         });
                     });
                     console.log('%c[SUCCESS] Manual listeners attached to all mode buttons', 'color: #00FF00; font-weight: bold');
+                }
+                
+                // Initialize Creative Studio button
+                const creativeStudioBtn = document.getElementById('show-creative-studio');
+                if (creativeStudioBtn) {
+                    creativeStudioBtn.addEventListener('click', () => {
+                        console.log('%c[CLICK] 🎨 Creative Studio button clicked!', 'color: #0088FF; font-weight: bold');
+                        if (window.creativeStudio) {
+                            window.creativeStudio.show();
+                        } else {
+                            console.error('%c[ERROR] Creative Studio not initialized', 'color: #FF0000; font-weight: bold');
+                            alert('Creative Studio is loading... Please try again in a moment.');
+                        }
+                    });
+                    console.log('%c[SUCCESS] Creative Studio button listener attached', 'color: #00FF00; font-weight: bold');
+                } else {
+                    console.warn('%c[WARNING] Creative Studio button not found', 'color: #FFAA00; font-weight: bold');
                 }
             }, 500);
         });
@@ -1952,6 +1980,46 @@
 
     <!-- Diagram Renderers Module -->
     <script type="module" src="diagram-renderers.js"></script>
+
+    <!-- Phase 10: Memory & Knowledge Management UI -->
+    <script type="module" src="memory-ui.js"></script>
+    <script type="module" src="auto-memory.js"></script>
+    <script src="memory-graph.js"></script>
+    
+    <!-- Help Button Handler -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const helpBtn = document.getElementById('help-btn');
+            if (helpBtn) {
+                helpBtn.addEventListener('click', () => {
+                    window.open('help.html', '_blank', 'width=1200,height=800');
+                });
+            }
+        });
+    </script>
+    
+    <script type="module">
+        import { initMemoryUI } from './memory-ui.js';
+        import { initAutoMemory, trackActivity } from './auto-memory.js';
+        
+        // Initialize Memory UI when page loads
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => {
+                setTimeout(() => {
+                    initMemoryUI();
+                    initAutoMemory();
+                }, 1000);
+            });
+        } else {
+            setTimeout(() => {
+                initMemoryUI();
+                initAutoMemory();
+            }, 1000);
+        }
+        
+        // Make trackActivity globally accessible
+        window.trackActivity = trackActivity;
+    </script>
 
 </body>
 </html>
