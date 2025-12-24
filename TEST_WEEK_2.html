@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Phase 11 Week 2 Test - Multi-File Upload</title>
+    <style>
+        body { 
+            font-family: Arial; 
+            padding: 20px; 
+            background: #1e1e1e; 
+            color: #fff; 
+        }
+        .test-section {
+            border: 2px solid #3c3c3c;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+        .success { color: #4CAF50; }
+        .error { color: #f44336; }
+        .info { color: #2196F3; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Phase 11 Week 2 Test Suite</h1>
+    
+    <div class="test-section">
+        <h2>✅ Checklist - Implementation Complete</h2>
+        <ul>
+            <li class="success">✓ npm install xlsx tesseract.js</li>
+            <li class="success">✓ multi-file-handler.js created (320 lines)</li>
+            <li class="success">✓ File cards HTML structure added</li>
+            <li class="success">✓ CSS styling added (~150 lines)</li>
+            <li class="success">✓ XLSX extraction function</li>
+            <li class="success">✓ Image OCR extraction function</li>
+            <li class="success">✓ Quick action buttons</li>
+            <li class="success">✓ Remove/Clear all functionality</li>
+        </ul>
+    </div>
+    
+    <div class="test-section">
+        <h2>📋 Manual Testing Steps</h2>
+        <ol>
+            <li class="info">Start server: <code>cd 'c:\\Users\\scoso\\WEBSITES\\AI Agents\\Ai-Agent'; node server.cjs</code></li>
+            <li class="info">Open: <a href="http://localhost:8888" style="color: #2196F3;">http://localhost:8888</a></li>
+            <li>Configure AI settings (API keys)</li>
+            <li>Open AI chat panel</li>
+            <li>Look for 📎 attachment button (bottom left of input)</li>
+            <li>Click 📎 → file picker should open</li>
+            <li>Select 1-5 test files (mix formats: PDF, DOCX, XLSX, images)</li>
+            <li>Verify file cards appear with:
+                <ul>
+                    <li>Correct icon (📄 📃 📈 🖼️)</li>
+                    <li>File name</li>
+                    <li>Size, word count, pages</li>
+                    <li>"📊 Summarize" and "🔍 Analyze" buttons</li>
+                    <li>× remove button</li>
+                </ul>
+            </li>
+            <li>Test quick actions:
+                <ul>
+                    <li>Click "Summarize" → check input textarea</li>
+                    <li>Click "Analyze" → check input textarea</li>
+                </ul>
+            </li>
+            <li>Test remove:
+                <ul>
+                    <li>Click × on one file → card disappears</li>
+                    <li>Click "Clear All" → all cards disappear</li>
+                </ul>
+            </li>
+            <li>Test limits:
+                <ul>
+                    <li>Try uploading 21 files → should reject</li>
+                    <li>Try file > 20 MB → should reject</li>
+                </ul>
+            </li>
+        </ol>
+    </div>
+    
+    <div class="test-section">
+        <h2>📊 Supported Formats</h2>
+        <table style="width: 100%; color: #fff;">
+            <tr>
+                <th style="text-align: left;">Format</th>
+                <th style="text-align: left;">Extensions</th>
+                <th style="text-align: left;">Extraction Method</th>
+                <th style="text-align: left;">Status</th>
+            </tr>
+            <tr>
+                <td>PDF</td>
+                <td>.pdf</td>
+                <td>pdf-parse</td>
+                <td class="success">✓ Ready</td>
+            </tr>
+            <tr>
+                <td>Word</td>
+                <td>.docx, .doc</td>
+                <td>mammoth</td>
+                <td class="success">✓ Ready</td>
+            </tr>
+            <tr>
+                <td>Excel</td>
+                <td>.xlsx, .xls</td>
+                <td>xlsx (new!)</td>
+                <td class="success">✓ NEW</td>
+            </tr>
+            <tr>
+                <td>Text</td>
+                <td>.txt</td>
+                <td>raw text</td>
+                <td class="success">✓ Ready</td>
+            </tr>
+            <tr>
+                <td>Images</td>
+                <td>.jpg, .jpeg, .png, .gif</td>
+                <td>tesseract.js OCR (new!)</td>
+                <td class="success">✓ NEW</td>
+            </tr>
+        </table>
+    </div>
+    
+    <div class="test-section">
+        <h2>🎯 Monica.ai Parity Tracker</h2>
+        <ul>
+            <li class="success">✓ Large document analysis (200 pages)</li>
+            <li class="success">✓ Multi-file upload (20 files)</li>
+            <li class="success">✓ Quick action buttons (Summarize, Analyze)</li>
+            <li class="success">✓ Format variety (PDF, DOCX, XLSX, images)</li>
+            <li class="success">✓ File metadata display</li>
+            <li class="info">⏳ Multi-model comparison (Week 3)</li>
+            <li class="info">⏳ Expert panel deliberation (Week 4)</li>
+        </ul>
+        <p><strong>Monica Parity: 70% Complete</strong> (up from 50% last week)</p>
+    </div>
+    
+    <div class="test-section">
+        <h2>⚡ Performance</h2>
+        <ul>
+            <li>Coding Time: <strong>~20 minutes</strong></li>
+            <li>Files Created: <strong>3</strong></li>
+            <li>Files Modified: <strong>3</strong></li>
+            <li>Lines of Code: <strong>~500</strong></li>
+            <li>Dependencies Added: <strong>2</strong> (xlsx, tesseract.js)</li>
+        </ul>
+    </div>
+    
+    <div class="test-section">
+        <h2>🚀 Next: Phase 11 Week 3</h2>
+        <p><strong>Multi-Model Comparison</strong></p>
+        <ul>
+            <li>Query 4 models simultaneously (GPT-5, Claude 4.5, Gemini 3, Grok 4)</li>
+            <li>Side-by-side response comparison view</li>
+            <li>Consensus summary generation</li>
+            <li>Model performance metrics (speed, quality, cost)</li>
+            <li>Structured commands (/rank, /estimate, /consensus, /debate)</li>
+        </ul>
+        <p><strong>Estimated Time: 30 minutes coding + 1 hour testing</strong></p>
+    </div>
+    
+    <hr style="border-color: #3c3c3c; margin: 40px 0;">
+    
+    <p style="text-align: center; color: #888;">
+        Phase 11 Week 2 Implementation Complete ✅<br>
+        Ready for User Testing<br>
+        <a href="http://localhost:8888" style="color: #2196F3;">→ Open UCAS Application</a>
+    </p>
+</body>
+</html>

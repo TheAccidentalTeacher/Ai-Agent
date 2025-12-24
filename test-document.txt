@@ -1,0 +1,11 @@
+This is a test document for the Monica-style chat attachment system.
+
+It contains multiple paragraphs to test document processing.
+
+The system should:
+1. Upload this file to Supabase Storage
+2. Download it for processing
+3. Extract the text content
+4. Store it in the database with word count and metadata
+
+If you can read this in the chat, the document attachment system is working correctly!
