@@ -13,7 +13,8 @@
     <!-- Favicon (inline to avoid 404) -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎮</text></svg>">
     
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style-new.css">
+    <link rel="stylesheet" href="context-panel-styles.css">
     <script src="tooltip.js"></script>
 </head>
 <body>
@@ -175,14 +176,14 @@
                         </select>
                     </div>
                     <div class="ai-actions">
-                        <button id="view-memory" class="icon-btn" title="View agent memory">🧠</button>
-                        <button id="ai-checkpoint" class="icon-btn" title="Save checkpoint">💾</button>
-                        <button id="ai-restore" class="icon-btn" title="Restore checkpoint" style="display: none;">↩️</button>
-                        <button id="ai-settings" class="icon-btn" title="Configure AI settings">⚙️</button>
-                        <button id="show-multi-agent" class="icon-btn" title="Show multi-agent consortium">🤖</button>
-                        <button id="show-creative-studio" class="icon-btn" title="Creative Studio - Generate AI content">🎨</button>
-                        <button id="ai-clear" class="icon-btn" title="Clear conversation">🗑️</button>
-                        <button id="ai-toggle" class="icon-btn" title="Close AI panel">×</button>
+                        <button id="view-memory" class="icon-btn" title="Agent Memory - View and manage what the AI remembers about you and your conversations. See stored facts, preferences, and context that helps the AI provide personalized responses.">🧠</button>
+                        <button id="ai-checkpoint" class="icon-btn" title="Save Checkpoint - Create a save point of your current conversation state. Like a bookmark, you can return to this exact moment later if you want to explore different conversation paths.">💾</button>
+                        <button id="ai-restore" class="icon-btn" title="Restore Checkpoint - Go back to a previously saved conversation point. Perfect for exploring 'what if' scenarios or recovering from mistakes without losing your chat history." style="display: none;">↩️</button>
+                        <button id="ai-settings" class="icon-btn" title="AI Settings - Configure API keys, choose AI models (GPT-4, Claude, etc.), adjust response behavior, temperature settings, and other advanced options.">⚙️</button>
+                        <button id="show-multi-agent" class="icon-btn" title="Multi-Agent Consortium - Activate multiple specialized AI agents working together. Each agent has expertise in different areas and they collaborate to give you comprehensive answers.">🤖</button>
+                        <button id="show-creative-studio" class="icon-btn" title="Creative Studio - Generate AI content including: images (DALL-E, Stable Diffusion), diagrams (flowcharts, architecture), code visualizations, videos, and other creative outputs.">🎨</button>
+                        <button id="ai-clear" class="icon-btn" title="Clear Conversation - Start fresh with a clean chat. This removes all messages but keeps your settings and saved memories intact.">🗑️</button>
+                        <button id="ai-toggle" class="icon-btn" title="Close AI Panel - Hide the assistant interface to maximize your workspace. Click the Consortium logo on the left edge to reopen anytime.">×</button>
                     </div>
                 </div>
                 
@@ -194,6 +195,15 @@
                 
                 <!-- Chat Tab Content -->
                 <div class="ai-tab-content active" id="chat-tab">
+                    <!-- Phase 11 Week 2: Attached Files -->
+                    <div id="file-cards-container" class="file-cards-container" style="display: none;">
+                        <div class="file-cards-header">
+                            <h3>📎 Attached Files (<span id="file-count">0</span>/20)</h3>
+                            <button id="clear-all-files" class="btn-text" title="Remove all attached files">Clear All</button>
+                        </div>
+                        <div id="file-cards-list" class="file-cards-list"></div>
+                    </div>
+
                     <div class="ai-messages" id="ai-messages">
                         <div class="ai-message system">
                             <p><strong>👋 Welcome to AI-Powered Level Design!</strong></p>
@@ -221,6 +231,7 @@
                                 <span class="hint"><kbd>Shift</kbd>+<kbd>↵</kbd> New line</span>
                                 <span class="hint"><kbd>Ctrl</kbd>+<kbd>K</kbd> Clear</span>
                             </div>
+                            <button id="attach-document-btn" class="btn-secondary" title="Attach documents (PDF, DOCX, XLSX, images)">📎 Attach</button>
                             <button id="ai-send" class="btn-primary" disabled title="Send message (Enter)">
                                 <span class="icon">➤</span> Send
                             </button>
@@ -233,10 +244,137 @@
                     <!-- Video UI will be injected here -->
                 </div>
             </aside>
+
+            <!-- Context Panel (Right Side) - Phase 11+ -->
+            <aside id="context-panel" class="context-panel">
+                <!-- Panel Header with Tabs -->
+                <div class="context-header">
+                    <div class="context-title">
+                        <span id="context-auto-indicator" class="auto-indicator" title="Auto-switching enabled - The panel automatically changes based on what you're doing (chatting, uploading files, using multi-agent, etc.)">🤖</span>
+                        <h3 id="context-panel-title">Context Panel</h3>
+                    </div>
+                    <div class="context-tabs">
+                        <button class="context-tab" data-panel="document" title="Document Intelligence - View uploaded files with live preview, OCR text extraction, and document analysis. See your PDFs, images, and documents right in the interface.">📄</button>
+                        <button class="context-tab" data-panel="knowledge" title="Knowledge Graph - Interactive visualization showing how the AI connects concepts, memories, and information. See the relationships between everything you've discussed.">🕸️</button>
+                        <button class="context-tab" data-panel="agents" title="Agent Monitor - Watch multiple AI agents working together in real-time. See their thinking process, status, and collaboration when using the multi-agent consortium.">🤖</button>
+                        <button class="context-tab" data-panel="context-aware" title="Context Awareness - See what the AI remembers from your conversation, key discussion points, and smart follow-up suggestions. The AI uses this to stay contextually relevant.">🧠</button>
+                        <button class="context-tab" data-panel="gallery" title="Output Gallery - Visual collection of all AI-generated content: images, diagrams, code snippets, charts, and creative outputs. Easy access to everything the AI has created for you.">🖼️</button>
+                        <button class="context-tab" data-panel="research" title="Research Assistant - Real-time web search results, fact checking, source citations, and references. The AI verifies information and provides credible sources.">🔍</button>
+                    </div>
+                    <button id="context-auto-toggle" class="icon-btn" title="Toggle Auto-Switching - Turn on/off automatic panel switching. When on, the panel automatically shows relevant info. When off, you manually control which panel to view.">⚡</button>
+                    <button id="context-close" class="icon-btn" title="Close Context Panel - Hide this panel to see more of your workspace. Click the 🧠 button on the right edge to reopen it anytime.">×</button>
+                </div>
+
+                <!-- Panel Content Areas -->
+                <div class="context-content">
+                    <!-- 1. Document Intelligence Panel -->
+                    <div class="context-panel-item" id="panel-document" style="display: none;">
+                        <div class="panel-empty-state">
+                            <div class="empty-icon">📄</div>
+                            <h4>Document Intelligence</h4>
+                            <p>Upload documents to see live preview with OCR extraction</p>
+                            <button class="btn-primary" onclick="document.getElementById('attach-document-btn').click()">
+                                📎 Upload Document
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 2. Knowledge Graph Panel -->
+                    <div class="context-panel-item" id="panel-knowledge" style="display: none;">
+                        <div class="panel-empty-state">
+                            <div class="empty-icon">🕸️</div>
+                            <h4>Knowledge Graph</h4>
+                            <p>Interactive visualization of memory connections and concept relationships</p>
+                            <div id="knowledge-graph-container" class="graph-container"></div>
+                        </div>
+                    </div>
+
+                    <!-- 3. Multi-Agent Activity Monitor -->
+                    <div class="context-panel-item" id="panel-agents" style="display: none;">
+                        <div class="agent-monitor">
+                            <h4>🤖 Active Agents</h4>
+                            <div id="agent-status-list" class="agent-list">
+                                <div class="agent-status-empty">
+                                    <p>No agents currently active</p>
+                                    <p class="hint">Start a conversation to see agent thinking</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 4. Context Awareness Panel -->
+                    <div class="context-panel-item active" id="panel-context-aware">
+                        <div class="context-aware-content">
+                            <h4>🧠 Conversation Context</h4>
+                            <div class="context-section">
+                                <h5>📚 Relevant Memories</h5>
+                                <div id="relevant-memories" class="context-list">
+                                    <p class="empty-hint">No relevant memories yet</p>
+                                </div>
+                            </div>
+                            <div class="context-section">
+                                <h5>💬 Key Points</h5>
+                                <div id="key-points" class="context-list">
+                                    <p class="empty-hint">Conversation summary will appear here</p>
+                                </div>
+                            </div>
+                            <div class="context-section">
+                                <h5>💡 Suggested Follow-ups</h5>
+                                <div id="suggested-questions" class="suggestion-list">
+                                    <p class="empty-hint">Smart suggestions will appear as you chat</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 5. Output Gallery Panel -->
+                    <div class="context-panel-item" id="panel-gallery" style="display: none;">
+                        <div class="gallery-content">
+                            <h4>🖼️ Generated Content</h4>
+                            <div id="output-gallery" class="output-grid">
+                                <div class="panel-empty-state">
+                                    <div class="empty-icon">🎨</div>
+                                    <p>Generated images, diagrams, and code will appear here</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 6. Research Assistant Panel -->
+                    <div class="context-panel-item" id="panel-research" style="display: none;">
+                        <div class="research-content">
+                            <h4>🔍 Research Assistant</h4>
+                            <div class="context-section">
+                                <h5>🌐 Web Results</h5>
+                                <div id="web-results" class="context-list">
+                                    <p class="empty-hint">Search results will appear here</p>
+                                </div>
+                            </div>
+                            <div class="context-section">
+                                <h5>✓ Fact Checking</h5>
+                                <div id="fact-checks" class="context-list">
+                                    <p class="empty-hint">Claims will be verified in real-time</p>
+                                </div>
+                            </div>
+                            <div class="context-section">
+                                <h5>📚 Sources</h5>
+                                <div id="sources-list" class="context-list">
+                                    <p class="empty-hint">Citations and references will appear here</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </aside>
             
             <!-- AI Panel Reopen Button (shown when collapsed) -->
             <button id="ai-reopen" class="ai-reopen-btn" style="display: none;" title="Open The Consortium">
                 <img src="./consortium-logo.png" alt="The Consortium" class="reopen-logo" onerror="this.style.display='none'">
+            </button>
+
+            <!-- Context Panel Reopen Button (shown when collapsed) -->
+            <button id="context-reopen" class="context-reopen-btn" style="display: none;" title="Open Context Panel">
+                🧠
             </button>
         </div>
 
@@ -252,6 +390,7 @@
     <input type="file" id="background-input" accept="image/*" style="display: none;">
     <input type="file" id="asset-input" accept="image/*" multiple style="display: none;">
     <input type="file" id="project-input" accept=".json" style="display: none;">
+    <input type="file" id="document-input" accept=".pdf,.docx,.doc,.txt,.xlsx,.xls,.jpg,.jpeg,.png,.gif" multiple style="display: none;">
 
     <!-- AI Settings Modal -->
     <div id="ai-settings-modal" class="modal hidden">
@@ -1985,6 +2124,7 @@
     <script type="module" src="memory-ui.js"></script>
     <script type="module" src="auto-memory.js"></script>
     <script src="memory-graph.js"></script>
+    <script src="context-panel.js"></script>
     
     <!-- Help Button Handler -->
     <script>
