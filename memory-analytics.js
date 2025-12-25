@@ -21,9 +21,13 @@ export class MemoryAnalytics {
     /**
      * Fetch analytics data from backend
      */
-    async fetchAnalyticsData() {
+    async fetchAnalyticsData(userId) {
         try {
-            const response = await fetch('/.netlify/functions/memory-analytics', {
+            if (!userId) {
+                throw new Error('User ID required for analytics');
+            }
+
+            const response = await fetch(`/.netlify/functions/memory-analytics?userId=${userId}`, {
                 method: 'GET',
                 headers: { 'Content-Type': 'application/json' }
             });
@@ -46,7 +50,9 @@ export class MemoryAnalytics {
      */
     async render() {
         try {
-            await this.fetchAnalyticsData();
+            if (!this.data) {
+                throw new Error('No analytics data available. Call fetchAnalyticsData() first.');
+            }
 
             this.container.innerHTML = `
                 <div class="analytics-dashboard">
@@ -170,23 +176,31 @@ export class MemoryAnalytics {
         if (!container || !this.data?.typeDistribution) return;
 
         // Create simple SVG pie chart
-        const total = Object.values(this.data.typeDistribution).reduce((a, b) => a + b, 0);
+        const typeData = this.data.typeDistribution;
+        const total = Object.values(typeData).reduce((a, b) => a + b, 0);
+        
+        if (total === 0) {
+            container.innerHTML = '<p style="text-align: center; color: var(--text-secondary); padding: 40px;">No data available</p>';
+            return;
+        }
+        
         let currentAngle = 0;
 
         const colors = {
-            'Research': '#2196F3',
-            'Video': '#F44336',
-            'Creative': '#9C27B0',
-            'Conversation': '#4CAF50',
-            'Manual': '#607D8B'
+            'research': '#2196F3',
+            'video': '#F44336',
+            'creative': '#9C27B0',
+            'conversation': '#4CAF50',
+            'manual': '#607D8B'
         };
 
-        const slices = Object.entries(this.data.typeDistribution).map(([type, count]) => {
+        const slices = Object.entries(typeData).map(([type, count]) => {
             const percentage = (count / total) * 100;
             const angle = (count / total) * 360;
-            const slice = this.createPieSlice(currentAngle, angle, colors[type] || '#999');
+            const color = colors[type.toLowerCase()] || '#999';
+            const slice = this.createPieSlice(currentAngle, angle, color);
             currentAngle += angle;
-            return { type, count, percentage, slice };
+            return { type, count, percentage, slice, color };
         });
 
         container.innerHTML = `
@@ -196,7 +210,7 @@ export class MemoryAnalytics {
             <div class="pie-legend">
                 ${slices.map(s => `
                     <div class="legend-item">
-                        <span class="legend-color" style="background: ${colors[s.type]}"></span>
+                        <span class="legend-color" style="background: ${s.color}"></span>
                         <span class="legend-label">${s.type}: ${s.count} (${s.percentage.toFixed(1)}%)</span>
                     </div>
                 `).join('')}

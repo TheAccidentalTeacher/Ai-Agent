@@ -3,6 +3,7 @@
 
 import { supabase } from './supabase-client.js';
 import { memoryDetailsModal } from './memory-details-modal.js';
+import { MemoryAnalytics } from './memory-analytics.js';
 
 // Memory UI state
 let currentUser = null;
@@ -100,6 +101,9 @@ function createMemoryTab() {
         </button>
         <button class="memory-subtab" data-subtab="graph" style="padding: 8px 16px; border: none; border-radius: 6px; background: transparent; color: var(--text-secondary); font-size: 14px; font-weight: 500; cursor: pointer;">
           🔗 Graph
+        </button>
+        <button class="memory-subtab" data-subtab="analytics" style="padding: 8px 16px; border: none; border-radius: 6px; background: transparent; color: var(--text-secondary); font-size: 14px; font-weight: 500; cursor: pointer;">
+          📊 Analytics
         </button>
       </div>
       
@@ -272,6 +276,19 @@ function createMemoryTab() {
           </div>
         </div>
       </div>
+      
+      <!-- Analytics View -->
+      <div class="memory-subtab-content" id="memory-analytics-view" style="display: none; flex-direction: column; flex: 1; overflow: hidden;">
+        <div id="memory-analytics-container" style="flex: 1; overflow-y: auto; background: var(--bg-primary);">
+          <!-- Analytics dashboard will render here -->
+          <div style="display: flex; align-items: center; justify-content: center; height: 100%; color: var(--text-secondary);">
+            <div style="text-align: center;">
+              <div style="font-size: 48px; margin-bottom: 20px;">📊</div>
+              <p>Loading analytics...</p>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   `;
   
@@ -358,18 +375,31 @@ function attachSubtabListeners() {
       // Show/hide content
       const searchView = document.getElementById('memory-search-view');
       const graphView = document.getElementById('memory-graph-view');
+      const analyticsView = document.getElementById('memory-analytics-view');
       
       if (targetSubtab === 'search') {
         searchView.style.display = 'flex';
         graphView.style.display = 'none';
+        analyticsView.style.display = 'none';
       } else if (targetSubtab === 'graph') {
         searchView.style.display = 'none';
         graphView.style.display = 'flex';
+        analyticsView.style.display = 'none';
         
         // Initialize graph on first view
         if (!window.memoryGraphInitialized) {
           initializeGraph();
           window.memoryGraphInitialized = true;
+        }
+      } else if (targetSubtab === 'analytics') {
+        searchView.style.display = 'none';
+        graphView.style.display = 'none';
+        analyticsView.style.display = 'flex';
+        
+        // Initialize analytics on first view
+        if (!window.memoryAnalyticsInitialized) {
+          initializeAnalytics();
+          window.memoryAnalyticsInitialized = true;
         }
       }
     });
@@ -544,6 +574,46 @@ async function initializeGraph() {
     console.log('✅ [Memory Graph] Initialized successfully');
   } catch (error) {
     console.error('❌ [Memory Graph] Initialization failed:', error);
+  }
+}
+
+/**
+ * Initialize analytics dashboard
+ */
+async function initializeAnalytics() {
+  console.log('📊 [Memory Analytics] Initializing...');
+  
+  if (!currentUser) {
+    console.warn('⚠️ [Memory Analytics] No user logged in');
+    return;
+  }
+  
+  const container = document.getElementById('memory-analytics-container');
+  if (!container) {
+    console.error('❌ [Memory Analytics] Container not found');
+    return;
+  }
+  
+  try {
+    const analytics = new MemoryAnalytics(container);
+    window.memoryAnalytics = analytics; // Store globally for access
+    await analytics.fetchAnalyticsData(currentUser.id);
+    await analytics.render();
+    console.log('✅ [Memory Analytics] Initialized successfully');
+  } catch (error) {
+    console.error('❌ [Memory Analytics] Initialization failed:', error);
+    container.innerHTML = `
+      <div style="display: flex; align-items: center; justify-content: center; height: 100%; color: var(--text-secondary);">
+        <div style="text-align: center;">
+          <div style="font-size: 48px; margin-bottom: 20px;">❌</div>
+          <h3 style="margin: 10px 0; color: var(--text-primary);">Analytics Error</h3>
+          <p style="margin: 10px 0;">${error.message}</p>
+          <button onclick="initializeAnalytics()" style="margin-top: 20px; padding: 10px 20px; background: var(--accent-color); color: white; border: none; border-radius: 6px; cursor: pointer;">
+            Retry
+          </button>
+        </div>
+      </div>
+    `;
   }
 }
 
