@@ -7,6 +7,12 @@
 [functions]
   node_bundler = "esbuild"
 
+[functions."extract-documents"]
+  timeout = 60
+
+[functions."document-process"]
+  timeout = 60
+
 # Headers for security
 [[headers]]
   for = "/*"

@@ -16,6 +16,10 @@ const { execFile } = require('child_process');
 const { promisify } = require('util');
 const execFileAsync = promisify(execFile);
 
+// Extraction safeguards
+const OCR_PAGE_LIMIT = 20;       // Avoid unbounded OCR work on huge scans
+const SCAN_THRESHOLD = 10;       // Words/page below this triggers OCR fallback
+
 // Quick check to see if a rendered canvas is effectively blank (all white/transparent)
 function isCanvasBlank(ctx, width, height) {
   const data = ctx.getImageData(0, 0, width, height).data;
@@ -267,15 +271,17 @@ async function extractText(buffer, contentType, filename) {
     
     // Count actual words in the full extracted text
     let wordsFound = text.split(/\s+/).filter(w => w.length > 0).length;
+    let wordsPerPage = pageCount ? wordsFound / Math.max(pageCount, 1) : 0;
     console.log(`[extract-documents] Total words found: ${wordsFound}`);
 
     // Fallback if pdf-parse returns nothing
-    if (wordsFound === 0) {
+    if (wordsFound === 0 || wordsPerPage < SCAN_THRESHOLD) {
       console.log('[extract-documents] Empty result from pdf-parse; falling back to pdfjs-dist extraction');
       const pdfJsResult = await extractPdfWithPdfJs(buffer, filename);
       text = pdfJsResult.text;
       pageCount = pdfJsResult.pageCount;
       wordsFound = pdfJsResult.wordCount;
+      wordsPerPage = pageCount ? wordsFound / Math.max(pageCount, 1) : 0;
       console.log(`[extract-documents] Fallback pdfjs-dist extracted: ${pageCount} pages, ${wordsFound} words`);
       console.log(`[extract-documents] Fallback First 500 chars: ${text.substring(0, 500)}`);
       console.log(`[extract-documents] Fallback Last 300 chars: ${text.substring(Math.max(0, text.length - 300))}`);
@@ -288,10 +294,32 @@ async function extractText(buffer, contentType, filename) {
           text = ghostscriptResult.text;
           pageCount = ghostscriptResult.pageCount;
           wordsFound = ghostscriptResult.wordCount;
+          wordsPerPage = pageCount ? wordsFound / Math.max(pageCount, 1) : 0;
           console.log(`[extract-documents] Ghostscript + OCR fallback extracted: ${pageCount} pages, ${wordsFound} words`);
         } catch (gsErr) {
           console.error('[extract-documents] Ghostscript + OCR fallback failed:', gsErr.message);
         }
+      }
+    }
+
+    // If words/page are still low, assume scanned PDF and run controlled OCR pass
+    if (wordsPerPage < SCAN_THRESHOLD) {
+      console.log(`[extract-documents] Detected scanned/low-text PDF (${wordsPerPage.toFixed(2)} words/page) — starting OCR fallback with limit ${OCR_PAGE_LIMIT}`);
+      try {
+        const ocrResult = await extractTextWithOCR(buffer, pageCount || parsed.numpages || 0, filename);
+        text = ocrResult.text;
+        pageCount = ocrResult.pageCount;
+        wordsFound = ocrResult.wordCount;
+        return {
+          text,
+          pageCount,
+          wordCount: wordsFound,
+          ocrLimited: ocrResult.ocrLimited,
+          ocrPagesProcessed: ocrResult.ocrPagesProcessed,
+          ocrTotalPages: ocrResult.ocrTotalPages
+        };
+      } catch (ocrErr) {
+        console.error('[extract-documents] OCR fallback failed:', ocrErr.message);
       }
     }
     
@@ -497,10 +525,12 @@ async function extractTextWithOCR(pdfBuffer, pageCount, filename) {
     });
     const pdfDoc = await loadingTask.promise;
     
-    console.log(`[extract-documents] PDF loaded, processing ${pdfDoc.numPages} pages with OCR...`);
+    const totalPages = pdfDoc.numPages;
+    const pagesToProcess = Math.min(totalPages, OCR_PAGE_LIMIT);
+    console.log(`[extract-documents] PDF loaded, processing ${pagesToProcess}/${totalPages} pages with OCR (limit=${OCR_PAGE_LIMIT})...`);
     
-    // Process each page
-    for (let pageNum = 1; pageNum <= pdfDoc.numPages; pageNum++) {
+    // Process each page (with cap)
+    for (let pageNum = 1; pageNum <= pagesToProcess; pageNum++) {
       console.log(`[extract-documents] 📄 OCR Page ${pageNum}/${pdfDoc.numPages}...`);
       
       const page = await pdfDoc.getPage(pageNum);
@@ -572,13 +602,20 @@ async function extractTextWithOCR(pdfBuffer, pageCount, filename) {
     const wordCount = allText.split(/\s+/).filter(w => w.length > 0).length;
     
     console.log(`[extract-documents] ✅ OCR complete: ${wordCount} words extracted in ${totalTime}s`);
+
+    const truncatedNotice = totalPages > OCR_PAGE_LIMIT
+      ? `[Note: This ${totalPages}-page PDF was OCR-scanned. Showing first ${OCR_PAGE_LIMIT} pages only for performance reasons.]\n\n`
+      : '';
     
     return {
-      text: allText.trim(),
-      pageCount: pdfDoc.numPages,
+      text: `${truncatedNotice}${allText.trim()}`,
+      pageCount: totalPages,
       wordCount: wordCount,
       extractionMethod: 'OCR',
-      extractionTime: parseFloat(totalTime)
+      extractionTime: parseFloat(totalTime),
+      ocrLimited: totalPages > OCR_PAGE_LIMIT,
+      ocrPagesProcessed: pagesToProcess,
+      ocrTotalPages: totalPages
     };
     
   } catch (error) {
