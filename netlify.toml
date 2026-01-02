@@ -2,9 +2,9 @@
 [build]
   publish = "."
   functions = "netlify/functions"
-  # Exclude documentation and test files from secrets scanning
-  # These contain example credentials that are not used in production
-  environment = { SECRETS_SCAN_OMIT_PATHS = "docs/**,*.md,test-key.html,.env.example" }
+  # Supabase anon key and URL are SAFE to expose (frontend-safe, RLS-protected)
+  # These MUST be in frontend code for Supabase auth to work
+  environment = { SECRETS_SCAN_OMIT_KEYS = "SUPABASE_URL,SUPABASE_ANON_KEY" }
 
 # Function settings
 [functions]
