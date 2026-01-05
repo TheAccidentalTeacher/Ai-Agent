@@ -55,9 +55,11 @@ const syncText = document.getElementById('sync-text');
  * Update UI based on authentication state
  */
 function updateAuthUI() {
-  if (isAuthenticated()) {
-    const user = getCurrentUser();
-    
+  const authenticated = isAuthenticated();
+  const user = authenticated ? getCurrentUser() : null;
+  
+  // Update header auth UI
+  if (authenticated) {
     // Hide sign-in button, show profile
     signInBtn.style.display = 'none';
     userProfile.style.display = 'block';
@@ -87,6 +89,31 @@ function updateAuthUI() {
     syncStatus.style.display = 'none';
     
     console.log('⚠️ Not authenticated - localStorage only');
+  }
+  
+  // Update settings modal auth section
+  updateSettingsAuthUI(authenticated, user);
+}
+
+/**
+ * Update auth section in settings modal
+ */
+function updateSettingsAuthUI(authenticated, user) {
+  const authNotSignedIn = document.getElementById('auth-not-signed-in');
+  const authSignedIn = document.getElementById('auth-signed-in');
+  const settingsUserEmail = document.getElementById('settings-user-email');
+  
+  if (!authNotSignedIn || !authSignedIn) return; // Elements not loaded yet
+  
+  if (authenticated && user) {
+    authNotSignedIn.style.display = 'none';
+    authSignedIn.style.display = 'block';
+    if (settingsUserEmail) {
+      settingsUserEmail.textContent = user.email || 'User';
+    }
+  } else {
+    authNotSignedIn.style.display = 'block';
+    authSignedIn.style.display = 'none';
   }
 }
 
@@ -243,12 +270,22 @@ function toggleProfileDropdown() {
 // Event Listeners
 // ============================================================================
 
-// Sign-in button
+// Sign-in button (header)
 signInBtn.addEventListener('click', (e) => {
   e.stopPropagation();
   console.log('🔓 Sign-in button clicked');
   showAuthModal();
 });
+
+// Sign-in button (settings modal)
+const settingsSignInBtn = document.getElementById('settings-sign-in-btn');
+if (settingsSignInBtn) {
+  settingsSignInBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    console.log('🔓 Settings sign-in button clicked');
+    showAuthModal();
+  });
+}
 
 // OAuth provider buttons
 googleSignInBtn.addEventListener('click', (e) => {

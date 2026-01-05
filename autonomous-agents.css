@@ -41,16 +41,25 @@
 
 /* Autonomous Agents Dashboard */
 #autonomous-tasks-container {
+    position: fixed;
+    top: 60px;
+    left: 0;
+    right: 0;
+    bottom: 0;
     padding: 24px;
-    max-width: 1200px;
-    margin: 0 auto;
+    background: #1e1e1e;
+    overflow-y: auto;
+    z-index: 100;
 }
 
 #autonomous-tasks-list {
-    margin-top: 24px;
+    max-width: 1200px;
+    margin: 24px auto 0;
 }
 
 .autonomous-empty-state {
+    max-width: 600px;
+    margin: 64px auto;
     text-align: center;
     padding: 64px 24px;
     background: rgba(255, 255, 255, 0.02);

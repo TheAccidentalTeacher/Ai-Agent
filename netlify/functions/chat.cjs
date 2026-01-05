@@ -93,7 +93,7 @@ exports.handler = async (event, context) => {
 
     // Determine provider and model
     const selectedProvider = provider || 'anthropic';
-    const selectedModel = model || (selectedProvider === 'anthropic' ? 'claude-sonnet-4.5' : 'gpt-5.2-codex');
+    const selectedModel = model || (selectedProvider === 'anthropic' ? 'claude-sonnet-4-5-20250929' : 'gpt-5.2');
     
     console.log('[Function] Selected provider:', selectedProvider);
     console.log('[Function] Selected model:', selectedModel);
@@ -176,10 +176,14 @@ exports.handler = async (event, context) => {
       // Prepare OpenAI API request
       console.log('[Function] 🎯 Preparing OpenAI API request...');
       
-      // GPT-5+ models use max_completion_tokens, older models use max_tokens
+      // Detect model type for proper parameter handling
       const isNewModel = selectedModel.includes('gpt-5') || selectedModel.includes('gpt-4.1');
-      const tokenParam = isNewModel ? 'max_completion_tokens' : 'max_tokens';
-      console.log('[Function] Model type:', isNewModel ? 'GPT-5/4.1+' : 'Legacy GPT');
+      const isReasoningModel = selectedModel.startsWith('o3') || selectedModel.startsWith('o4');
+      const isCodexModel = selectedModel.includes('codex');
+      
+      // GPT-5+, o-series, and codex models use max_completion_tokens, older models use max_tokens
+      const tokenParam = (isNewModel || isReasoningModel || isCodexModel) ? 'max_completion_tokens' : 'max_tokens';
+      console.log('[Function] Model type:', isReasoningModel ? 'o-series reasoning' : (isCodexModel ? 'Codex' : (isNewModel ? 'GPT-5/4.1+' : 'Legacy GPT')));
       console.log('[Function] Token parameter:', tokenParam);
       
       // GPT-5 models only support temperature=1 (default), older models support 0-2
@@ -193,11 +197,12 @@ exports.handler = async (event, context) => {
       };
       
       // Only add temperature for older models that support it
-      if (!isNewModel) {
+      // Note: GPT-5+, o-series reasoning models, and Codex models don't support custom temperature
+      if (!isNewModel && !isReasoningModel && !isCodexModel) {
         openaiRequest.temperature = 0.7;
         console.log('[Function] Temperature set to 0.7 (legacy model)');
       } else {
-        console.log('[Function] Temperature not set (GPT-5+ uses default=1)');
+        console.log('[Function] Temperature not set (modern model uses default=1)');
       }
       
       console.log('[Function] Request configuration:');

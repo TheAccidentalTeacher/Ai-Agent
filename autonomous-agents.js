@@ -11,12 +11,25 @@ class AutonomousAgents {
   }
 
   async init() {
-    if (this.isInitialized) return;
+    if (this.isInitialized) {
+      console.log('⚠️ Autonomous Agents already initialized');
+      return;
+    }
     
     console.log('🤖 Initializing Autonomous Agents...');
-    await this.loadTasks();
-    this.startPolling();
-    this.isInitialized = true;
+    
+    try {
+      await this.loadTasks();
+      console.log('✅ Tasks loaded:', this.tasks.length);
+      
+      this.startPolling();
+      
+      this.isInitialized = true;
+      console.log('✅ Autonomous Agents fully initialized');
+    } catch (error) {
+      console.error('❌ Failed to initialize Autonomous Agents:', error);
+      throw error;
+    }
   }
 
   // ============================================================================
@@ -24,7 +37,7 @@ class AutonomousAgents {
   // ============================================================================
 
   async createTask(taskConfig) {
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { user } } = await window.supabase.auth.getUser();
     if (!user) throw new Error('Must be logged in to create tasks');
 
     const task = {
@@ -40,7 +53,7 @@ class AutonomousAgents {
       status: 'pending'
     };
 
-    const { data, error } = await supabase
+    const { data, error } = await window.supabase
       .from('autonomous_tasks')
       .insert([task])
       .select()
@@ -63,25 +76,37 @@ class AutonomousAgents {
   // ============================================================================
 
   async loadTasks() {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    try {
+      console.log('🔍 Getting user...');
+      const { data: { user } } = await window.supabase.auth.getUser();
+      if (!user) {
+        console.log('⚠️ No user logged in');
+        return;
+      }
+      console.log('✅ User found:', user.email);
 
-    const { data, error } = await supabase
-      .from('autonomous_tasks')
-      .select('*')
-      .order('created_at', { ascending: false });
+      console.log('📊 Querying autonomous_tasks table...');
+      const { data, error } = await window.supabase
+        .from('autonomous_tasks')
+        .select('*')
+        .order('created_at', { ascending: false });
 
-    if (error) {
-      console.error('❌ Failed to load tasks:', error);
-      return;
+      if (error) {
+        console.error('❌ Failed to load tasks:', error);
+        console.error('Error details:', JSON.stringify(error, null, 2));
+        return;
+      }
+
+      console.log('✅ Tasks loaded from database:', data?.length || 0);
+      this.tasks = data || [];
+      this.updateUI();
+    } catch (error) {
+      console.error('❌ Exception in loadTasks:', error);
     }
-
-    this.tasks = data || [];
-    this.updateUI();
   }
 
   async cancelTask(taskId) {
-    const { error } = await supabase
+    const { error } = await window.supabase
       .from('autonomous_tasks')
       .update({ status: 'cancelled', updated_at: new Date().toISOString() })
       .eq('id', taskId);
@@ -95,7 +120,7 @@ class AutonomousAgents {
   }
 
   async deleteTask(taskId) {
-    const { error } = await supabase
+    const { error } = await window.supabase
       .from('autonomous_tasks')
       .delete()
       .eq('id', taskId);
@@ -475,7 +500,8 @@ class AutonomousAgents {
 
     switch (preset) {
       case 'now':
-        targetDate = now;
+        // Schedule 10 seconds in the future so it actually executes
+        targetDate = new Date(now.getTime() + 10 * 1000);
         break;
       case '1h':
         targetDate = new Date(now.getTime() + 60 * 60 * 1000);
@@ -494,8 +520,14 @@ class AutonomousAgents {
         targetDate = now;
     }
 
-    // Format for datetime-local input (YYYY-MM-DDTHH:MM)
-    const formatted = targetDate.toISOString().slice(0, 16);
+    // Format for datetime-local input (YYYY-MM-DDTHH:MM) in LOCAL time
+    const year = targetDate.getFullYear();
+    const month = String(targetDate.getMonth() + 1).padStart(2, '0');
+    const day = String(targetDate.getDate()).padStart(2, '0');
+    const hours = String(targetDate.getHours()).padStart(2, '0');
+    const minutes = String(targetDate.getMinutes()).padStart(2, '0');
+    const formatted = `${year}-${month}-${day}T${hours}:${minutes}`;
+    
     input.value = formatted;
   }
 
@@ -529,9 +561,10 @@ class AutonomousAgents {
     try {
       await this.createTask(taskConfig);
       this.hideCreateModal();
-      showNotification('✅ Task created successfully!', 'success');
+      console.log('✅ Task created successfully!');
     } catch (error) {
-      showNotification('❌ Failed to create task: ' + error.message, 'error');
+      console.error('❌ Failed to create task:', error);
+      alert('Failed to create task: ' + error.message);
     }
   }
 
@@ -548,6 +581,9 @@ class AutonomousAgents {
   async executeTask(taskId) {
     console.log(`🚀 Executing task ${taskId}...`);
 
+    // Reload tasks to ensure we have the latest (fixes race condition after task creation)
+    await this.loadTasks();
+
     const task = this.tasks.find(t => t.id === taskId);
     if (!task) {
       console.error('❌ Task not found:', taskId);
@@ -555,7 +591,7 @@ class AutonomousAgents {
     }
 
     // Update status to running
-    await supabase
+    await window.supabase
       .from('autonomous_tasks')
       .update({ 
         status: 'running',
@@ -581,7 +617,7 @@ class AutonomousAgents {
       }
 
       // Update as completed
-      await supabase
+      await window.supabase
         .from('autonomous_tasks')
         .update({ 
           status: 'completed',
@@ -595,7 +631,7 @@ class AutonomousAgents {
     } catch (error) {
       console.error('❌ Task failed:', error);
 
-      await supabase
+      await window.supabase
         .from('autonomous_tasks')
         .update({ 
           status: 'failed',
@@ -612,25 +648,66 @@ class AutonomousAgents {
     const config = task.config;
     console.log('🔍 Running research:', config.query);
 
-    // Call deep research function
-    const response = await fetch('/.netlify/functions/deep-search', {
+    // Determine research type: DEEP (multi-agent) or QUICK (basic)
+    const useDeepResearch = config.researchType === 'deep' || config.enableConsortium !== false;
+    
+    const endpoint = useDeepResearch ? 
+      '/.netlify/functions/deep-research' : 
+      '/.netlify/functions/research';
+
+    console.log(`📊 Research type: ${useDeepResearch ? 'DEEP (Multi-Agent Consortium)' : 'QUICK (Basic Search)'}`);
+    
+    if (useDeepResearch) {
+      console.log('🎭 Consortium Analysis enabled - this will take 10-25 minutes...');
+    }
+
+    // Call research function (works both locally and on Netlify)
+    const response = await fetch(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         query: config.query,
-        maxSources: config.maxSources || 20
+        options: {
+          maxResults: config.maxSources || 30, // More sources for deep research
+          extractCount: useDeepResearch ? 15 : 5, // Extract more URLs for deep
+          extractContent: true,
+          includeAcademic: config.includeAcademic !== false, // Scholar, arXiv, etc.
+          personas: config.personas || [
+            'master-teacher',
+            'classical-educator',
+            'strategist',
+            'theologian',
+            'technical-architect',
+            'debugger',
+            'writer',
+            'analyst'
+          ]
+        }
       })
     });
+
+    if (!response.ok) {
+      throw new Error(`Research API returned ${response.status}: ${response.statusText}`);
+    }
 
     const results = await response.json();
 
     // Save to memory if configured
-    if (config.saveToMemory) {
-      await saveToMemory(
-        `Research: ${config.query}`,
-        JSON.stringify(results, null, 2),
-        'autonomous_research'
-      );
+    if (config.saveToMemory && window.saveResearchToMemory) {
+      try {
+        const memoryContent = useDeepResearch ? 
+          `# Deep Research: ${config.query}\n\n${JSON.stringify(results.consortiumAnalysis, null, 2)}` :
+          JSON.stringify(results, null, 2);
+          
+        await window.saveResearchToMemory(
+          `Research: ${config.query}`,
+          memoryContent,
+          'autonomous_research'
+        );
+        console.log('💾 Research saved to memory');
+      } catch (memErr) {
+        console.warn('⚠️ Could not save to memory:', memErr.message);
+      }
     }
 
     return results;
@@ -676,14 +753,56 @@ class AutonomousAgents {
   }
 
   // ============================================================================
-  // POLLING (Check for task updates)
+  // POLLING (Check for task updates and execute due tasks)
   // ============================================================================
 
   startPolling() {
-    // Poll every 30 seconds for task updates
-    this.pollInterval = setInterval(() => {
-      this.loadTasks();
-    }, 30000);
+    console.log('⏰ Starting polling...');
+    // Check for due tasks every 10 seconds
+    this.pollInterval = setInterval(async () => {
+      await this.checkAndExecuteDueTasks();
+    }, 10000);
+    
+    // Also do initial check
+    this.checkAndExecuteDueTasks();
+    console.log('✅ Polling started');
+  }
+
+  async checkAndExecuteDueTasks() {
+    try {
+      console.log('🔍 [Poller] Checking for due tasks...');
+      
+      const now = new Date().toISOString();
+      const { data: { user } } = await window.supabase.auth.getUser();
+      
+      if (!user) return;
+
+      const { data: dueTasks, error } = await window.supabase
+        .from('autonomous_tasks')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('status', 'pending')
+        .lte('scheduled_for', now);
+
+      if (error) {
+        console.error('❌ [Poller] Error checking tasks:', error);
+        return;
+      }
+
+      console.log(`📊 [Poller] Found ${dueTasks?.length || 0} due tasks`);
+
+      if (dueTasks && dueTasks.length > 0) {
+        for (const task of dueTasks) {
+          console.log(`▶️ [Poller] Executing task: ${task.task_name} (${task.id})`);
+          await this.executeTask(task.id);
+        }
+      }
+
+      // Refresh UI after checking
+      await this.loadTasks();
+    } catch (error) {
+      console.error('❌ [Poller] Error in checkAndExecuteDueTasks:', error);
+    }
   }
 
   stopPolling() {
@@ -698,11 +817,21 @@ class AutonomousAgents {
 // GLOBAL INSTANCE
 // ============================================================================
 
+// Expose class globally so it can be instantiated from index.html
+window.AutonomousAgents = AutonomousAgents;
+
 const autonomousAgents = new AutonomousAgents();
+window.autonomousAgents = autonomousAgents;
 
 // Auto-initialize when page loads (if user is logged in)
 document.addEventListener('DOMContentLoaded', async () => {
-  const { data: { user } } = await supabase.auth.getUser();
+  // Wait for supabase to be available
+  if (typeof window.supabase === 'undefined') {
+    console.warn('⚠️ [Autonomous] Supabase not yet loaded, skipping auto-init');
+    return;
+  }
+  
+  const { data: { user } } = await window.supabase.auth.getUser();
   if (user) {
     await autonomousAgents.init();
   }

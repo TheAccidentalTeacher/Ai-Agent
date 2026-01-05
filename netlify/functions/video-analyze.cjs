@@ -134,7 +134,7 @@ Format your response as JSON:
 }`;
 
         const message = await anthropic.messages.create({
-            model: 'claude-sonnet-4-20250514',
+            model: 'claude-sonnet-4-5-20250929',
             max_tokens: 4000,
             temperature: 0.3,
             system: systemPrompt,
@@ -195,7 +195,7 @@ ${truncatedTranscript}
 Provide your expert analysis focusing on what's most relevant to your area of expertise. Be specific and insightful.`;
 
             const message = await anthropic.messages.create({
-                model: 'claude-sonnet-4-20250514',
+                model: 'claude-sonnet-4-5-20250929',
                 max_tokens: 1000,
                 temperature: 0.7,
                 system: systemPrompt,

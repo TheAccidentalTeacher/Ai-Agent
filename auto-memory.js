@@ -523,6 +523,3 @@ supabase.auth.onAuthStateChange((event, session) => {
     }
   }
 });
-
-// Export for manual integration
-export { trackActivity };

@@ -43,7 +43,7 @@ exports.handler = async (event, context) => {
     });
 
     const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-5-20250929',
       max_tokens: 16000,  // Increased from 3000 - discussion questions need more space
       temperature: 0.8,
       system: `You are an expert educator specializing in Socratic questioning and facilitating meaningful classroom discussions. You create questions that:

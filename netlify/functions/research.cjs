@@ -88,9 +88,17 @@ exports.handler = async (event, context) => {
       };
     }
 
+    // Enhance search options for better quality
+    const enhancedOptions = {
+      ...options,
+      maxResults: maxResults,
+      searchDepth: 'advanced', // Force advanced search
+      includeRecent: true // Add 2024/2025 to queries
+    };
+
     // Execute search
     const startTime = Date.now();
-    const searchResults = await orchestrator.search(query, options);
+    const searchResults = await orchestrator.search(query, enhancedOptions);
     const searchDuration = Date.now() - startTime;
 
     console.log(`[Research API] Search completed in ${searchDuration}ms: ${searchResults.results.length} results`);

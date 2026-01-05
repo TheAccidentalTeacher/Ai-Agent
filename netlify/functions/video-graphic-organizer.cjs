@@ -104,7 +104,7 @@ Make it grade-appropriate for ${gradeLevel || 'middle school'} with clear, concr
 
     console.log(`[Graphic Organizer] Sending request to Claude (${truncatedTranscript.length} chars)`);
     const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-5-20250929',
       max_tokens: 4096,
       temperature: 0.7,
       messages: [{

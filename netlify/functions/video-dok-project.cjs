@@ -37,7 +37,7 @@ exports.handler = async (event, context) => {
 
     // Call Claude Sonnet 4 to generate DOK project
     const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-5-20250929',
       max_tokens: 8192, // Extended projects need more tokens
       temperature: 0.7,
       system: `You are an expert educator specializing in creating rigorous, DOK 3-4 level projects that promote deep thinking and real-world application. You understand Depth of Knowledge framework and create projects that truly require strategic or extended thinking.

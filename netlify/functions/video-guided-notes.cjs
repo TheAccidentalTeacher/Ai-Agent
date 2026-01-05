@@ -185,7 +185,7 @@ Focus on helping students actively engage with the video content while taking no
         console.log(`📝 Generating ${style} guided notes with Claude Sonnet 4...`);
 
         const message = await anthropic.messages.create({
-            model: 'claude-sonnet-4-20250514',
+            model: 'claude-sonnet-4-5-20250929',
             max_tokens: 4096,
             temperature: 0.7,
             messages: [{

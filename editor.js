@@ -483,7 +483,7 @@ class GameEditor {
             const config = JSON.parse(stored || '{}');
             const provider = config.provider || 'anthropic';
             const model = provider === 'anthropic' ? 
-                (config.anthropic_model || 'claude-sonnet-4-5') : 
+                (config.anthropic_model || 'claude-sonnet-4-5-20250929') : 
                 (config.openai_model || 'gpt-5.2');
             
             const quickSwitch = document.getElementById('quick-model-switch');
@@ -1459,6 +1459,16 @@ class GameEditor {
         this.aiInput.value = '';
         console.log('[AI Message] ✓ User message added, input cleared');
 
+        // Save user message to persistent chat history
+        try {
+            if (window.chatHistory) {
+                await window.chatHistory.saveMessage('user', message);
+                console.log('[Editor] ✓ Saved user message to database');
+            }
+        } catch (error) {
+            console.error('[Editor] ❌ Failed to save user message:', error);
+        }
+
         // Get config for persona
         const config = JSON.parse(localStorage.getItem('ai_config') || '{}');
         const persona = config.persona || 'default';
@@ -1489,7 +1499,7 @@ class GameEditor {
             const config = JSON.parse(localStorage.getItem('ai_config') || '{}');
             const provider = config.provider || 'anthropic';
             const model = provider === 'anthropic' ? 
-                (config.anthropic_model || 'claude-sonnet-4-5') : 
+                (config.anthropic_model || 'claude-sonnet-4-5-20250929') : 
                 (config.openai_model || 'gpt-5.2');
             const enableImages = config.enable_images !== false; // default true
             const persona = config.persona || 'default';
@@ -1562,8 +1572,21 @@ class GameEditor {
             
             // Add assistant response
             console.log('[AI Message] Adding assistant response to chat UI...');
-            this.addMessage('assistant', data.content[0].text);
+            
+            // Get friendly model name
+            const modelName = this.getFriendlyModelName(data.model);
+            this.addMessage('assistant', data.content[0].text, true, modelName);
             console.log('[AI Message] ✅ Assistant response added successfully');
+            
+            // Save assistant response to persistent chat history
+            try {
+                if (window.chatHistory) {
+                    await window.chatHistory.saveMessage('assistant', data.content[0].text);
+                    console.log('[Editor] ✓ Saved assistant message to database');
+                }
+            } catch (error) {
+                console.error('[Editor] ❌ Failed to save assistant message:', error);
+            }
             
             // Save assistant response to memory
             memory.addInteraction('assistant', data.content[0].text, {
@@ -1591,13 +1614,14 @@ class GameEditor {
         }
     }
 
-    addMessage(role, content, isEditable = true) {
+    addMessage(role, content, isEditable = true, modelName = null) {
         console.group(`💭 Adding ${role} message`);
         
         console.log('[Add Message] Role:', role);
         console.log('[Add Message] Content length:', content?.length || 0);
         console.log('[Add Message] Content preview:', content?.substring(0, 100) + (content?.length > 100 ? '...' : ''));
         console.log('[Add Message] Editable:', isEditable);
+        console.log('[Add Message] Model:', modelName);
         
         const messagesContainer = document.getElementById('ai-messages');
         console.log('[Add Message] Messages container found:', !!messagesContainer);
@@ -1611,10 +1635,16 @@ class GameEditor {
         const now = new Date();
         const timeStr = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
         
+        // Show model badge for assistant messages
+        const modelBadge = (role === 'assistant' && modelName) 
+            ? `<span class="ai-model-badge">${modelName}</span>` 
+            : '';
+        
         const headerDiv = document.createElement('div');
         headerDiv.className = 'ai-message-header';
         headerDiv.innerHTML = `
             <span class="ai-message-role">${role === 'user' ? 'You' : (role === 'system' ? 'System' : 'AI')}</span>
+            ${modelBadge}
             <span class="ai-message-time">${timeStr}</span>
         `;
         messageDiv.appendChild(headerDiv);
@@ -1885,6 +1915,25 @@ class GameEditor {
         return state;
     }
 
+    // ========================================================================
+    // MODEL NAME HELPER
+    // ========================================================================
+    
+    getFriendlyModelName(modelId) {
+        if (!modelId) return null;
+        const modelMap = {
+            'claude-sonnet-4-5-20250929': 'Sonnet 4.5',
+            'claude-opus-4-5-20251101': 'Opus 4.5',
+            'claude-haiku-4-5-20251001': 'Haiku 4.5',
+            'gpt-4o': 'GPT-4o',
+            'gpt-4o-mini': 'GPT-4o Mini',
+            'gpt-5.2': 'GPT-5.2',
+            'o1-preview': 'o1 Preview',
+            'o1-mini': 'o1 Mini'
+        };
+        return modelMap[modelId] || modelId;
+    }
+    
     // ========================================================================
     // MARKDOWN PARSER
     // ========================================================================

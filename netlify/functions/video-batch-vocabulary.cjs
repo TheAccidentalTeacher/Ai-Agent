@@ -88,7 +88,7 @@ Format in clean Markdown with:
 Make this a comprehensive study resource that shows how vocabulary connects across all ${videos.length} videos.`;
 
         const message = await anthropic.messages.create({
-            model: 'claude-sonnet-4-20250514',
+            model: 'claude-sonnet-4-5-20250929',
             max_tokens: 16000,
             temperature: 0.7,
             messages: [{

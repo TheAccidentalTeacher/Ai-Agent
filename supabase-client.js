@@ -62,6 +62,9 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     }
 });
 
+// Expose to window for non-module scripts
+window.supabase = supabase;
+
 // Log session exchange process
 if (urlHasOAuthTokens) {
     console.log('⏳ Waiting for Supabase to exchange OAuth tokens...');

@@ -167,18 +167,22 @@
                     <div class="ai-model-switcher" id="ai-model-switcher" style="display: none;">
                         <select id="quick-model-switch" title="Switch AI model">
                             <optgroup label="Anthropic">
-                                <option value="anthropic:claude-sonnet-4-5">Sonnet 4.5</option>
-                                <option value="anthropic:claude-opus-4-5">Opus 4.5</option>
-                                <option value="anthropic:claude-haiku-4-5">Haiku 4.5</option>
-                                <option value="anthropic:claude-3-5-sonnet-20240620">3.5 Sonnet</option>
+                                <option value="anthropic:claude-sonnet-4-5-20250929">Sonnet 4.5</option>
+                                <option value="anthropic:claude-opus-4-5-20251101">Opus 4.5</option>
+                                <option value="anthropic:claude-haiku-4-5-20251001">Haiku 4.5</option>
+                                <option value="anthropic:claude-3-5-haiku-20241022">3.5 Haiku</option>
+                                <option value="anthropic:claude-3-5-sonnet-20241022">3.5 Sonnet</option>
                                 <option value="anthropic:claude-3-haiku-20240307">3 Haiku</option>
                             </optgroup>
                             <optgroup label="OpenAI">
-                                <option value="openai:gpt-5.2">GPT-5.2</option>
+                                <option value="openai:gpt-5.2">GPT-5.2 (Best)</option>
+                                <option value="openai:gpt-5.2-pro">GPT-5.2 Pro (Smartest)</option>
+                                <option value="openai:gpt-5.1-codex">GPT-5.1 Codex (Coding)</option>
                                 <option value="openai:gpt-5">GPT-5</option>
-                                <option value="openai:gpt-5-mini">GPT-5 Mini</option>
+                                <option value="openai:gpt-5-mini">GPT-5 Mini (Fast)</option>
+                                <option value="openai:o3">o3 (Reasoning)</option>
+                                <option value="openai:o4-mini">o4-mini (Fast Reasoning)</option>
                                 <option value="openai:gpt-4.1">GPT-4.1</option>
-                                <option value="openai:gpt-3.5-turbo">GPT-3.5</option>
                             </optgroup>
                         </select>
                     </div>
@@ -266,6 +270,7 @@
                         <h3 id="context-panel-title">Context Panel</h3>
                     </div>
                     <div class="context-tabs">
+                        <button class="context-tab" data-panel="favorites" title="Favorites - Quick access to your starred conversations and memories. Pin important items for instant recall.">⭐</button>
                         <button class="context-tab" data-panel="document" title="Document Intelligence - View uploaded files with live preview, OCR text extraction, and document analysis. See your PDFs, images, and documents right in the interface.">📄</button>
                         <button class="context-tab" data-panel="knowledge" title="Knowledge Graph - Interactive visualization showing how the AI connects concepts, memories, and information. See the relationships between everything you've discussed.">🕸️</button>
                         <button class="context-tab" data-panel="agents" title="Agent Monitor - Watch multiple AI agents working together in real-time. See their thinking process, status, and collaboration when using the multi-agent consortium.">👁️</button>
@@ -279,8 +284,18 @@
 
                 <!-- Panel Content Areas -->
                 <div class="context-content">
+                    <!-- 0. Favorites Panel -->
+                    <div class="context-panel-item" id="panel-favorites">
+                        <div class="favorites-panel-content">
+                            <h4>⭐ Starred & Pinned</h4>
+                            <div id="favorites-list" class="favorites-list">
+                                <div class="favorites-loading">Loading favorites...</div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- 1. Document Intelligence Panel -->
-                    <div class="context-panel-item" id="panel-document" style="display: none;">
+                    <div class="context-panel-item" id="panel-document">
                         <div class="panel-empty-state">
                             <div class="empty-icon">📄</div>
                             <h4>Document Intelligence</h4>
@@ -292,7 +307,7 @@
                     </div>
 
                     <!-- 2. Knowledge Graph Panel -->
-                    <div class="context-panel-item" id="panel-knowledge" style="display: none;">
+                    <div class="context-panel-item" id="panel-knowledge">
                         <div class="panel-empty-state">
                             <div class="empty-icon">🕸️</div>
                             <h4>Knowledge Graph</h4>
@@ -302,7 +317,7 @@
                     </div>
 
                     <!-- 3. Multi-Agent Activity Monitor -->
-                    <div class="context-panel-item" id="panel-agents" style="display: none;">
+                    <div class="context-panel-item" id="panel-agents">
                         <div class="agent-monitor">
                             <h4>👥 Active Agents</h4>
                             <div id="agent-status-list" class="agent-list">
@@ -340,7 +355,7 @@
                     </div>
 
                     <!-- 5. Output Gallery Panel -->
-                    <div class="context-panel-item" id="panel-gallery" style="display: none;">
+                    <div class="context-panel-item" id="panel-gallery">
                         <div class="gallery-content">
                             <h4>🖼️ Generated Content</h4>
                             <div id="output-gallery" class="output-grid">
@@ -353,7 +368,7 @@
                     </div>
 
                     <!-- 6. Research Assistant Panel -->
-                    <div class="context-panel-item" id="panel-research" style="display: none;">
+                    <div class="context-panel-item" id="panel-research">
                         <div class="research-content">
                             <h4>🔍 Research Assistant</h4>
                             <div class="context-section">
@@ -450,26 +465,49 @@
                     <small>Scott's Personal Agent Council - 12 deeply-researched expert personas</small>
                 </div>
 
-                <div class="form-group">
-                    <label>🧠 Agent Memory</label>
-                    <div class="memory-stats" id="memory-stats" style="background: #2a2a2a; padding: 12px; border-radius: 4px; margin: 8px 0;">
-                        <p style="margin: 4px 0; font-size: 0.9em;"><strong>Conversations:</strong> <span id="memory-count">0</span></p>
-                        <p style="margin: 4px 0; font-size: 0.9em;"><strong>Topics:</strong> <span id="memory-topics">None</span></p>
-                        <p style="margin: 4px 0; font-size: 0.9em;"><strong>Since:</strong> <span id="memory-since">Never</span></p>
-                    </div>
-                    <div class="button-group" style="display: flex; gap: 8px; margin-top: 8px;">
-                        <button id="view-memory" class="btn-secondary" style="flex: 1;">👁️ View Memory</button>
-                        <button id="clear-memory" class="btn-secondary" style="flex: 1; background: #f44336;">🗑️ Clear</button>
+                <!-- Cloud Sync / Authentication -->
+                <div class="form-group" style="border: 1px solid #3c3c3c; border-radius: 8px; padding: 16px; background: #2a2a2a;">
+                    <label style="font-size: 16px; display: flex; align-items: center; gap: 8px;">
+                        ☁️ Cloud Sync & Memory
+                    </label>
+                    <div id="auth-status-container">
+                        <!-- Not Signed In State -->
+                        <div id="auth-not-signed-in" style="display: none;">
+                            <p style="margin: 12px 0; font-size: 13px; color: #999;">
+                                Sign in to enable cloud sync and memory across all your devices
+                            </p>
+                            <button id="settings-sign-in-btn" class="btn-primary" style="width: 100%; padding: 12px; font-size: 14px;">
+                                🔓 Sign In with Supabase
+                            </button>
+                        </div>
+                        
+                        <!-- Signed In State -->
+                        <div id="auth-signed-in" style="display: none;">
+                            <div style="background: #1e1e1e; padding: 12px; border-radius: 6px; margin: 12px 0;">
+                                <p style="margin: 4px 0; font-size: 12px; color: #888;">Signed in as</p>
+                                <p id="settings-user-email" style="margin: 4px 0; font-size: 14px; font-weight: bold; color: #4CAF50;"></p>
+                            </div>
+                            <div class="memory-stats" id="memory-stats" style="background: #1e1e1e; padding: 12px; border-radius: 6px; margin: 12px 0;">
+                                <p style="margin: 4px 0; font-size: 0.9em;"><strong>Conversations:</strong> <span id="memory-count">0</span></p>
+                                <p style="margin: 4px 0; font-size: 0.9em;"><strong>Topics:</strong> <span id="memory-topics">None</span></p>
+                                <p style="margin: 4px 0; font-size: 0.9em;"><strong>Since:</strong> <span id="memory-since">Never</span></p>
+                            </div>
+                            <div class="button-group" style="display: flex; gap: 8px; margin-top: 8px;">
+                                <button id="view-memory" class="btn-secondary" style="flex: 1;">👁️ View Memory</button>
+                                <button id="clear-memory" class="btn-secondary" style="flex: 1; background: #f44336;">🗑️ Clear</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
                 <div class="form-group" id="anthropic-models">
                     <label for="anthropic-model">Claude Model</label>
                     <select id="anthropic-model">
-                        <option value="claude-sonnet-4-5" selected>Claude Sonnet 4.5 (Smart for Agents/Coding)</option>
-                        <option value="claude-opus-4-5">Claude Opus 4.5 (Maximum Intelligence)</option>
-                        <option value="claude-haiku-4-5">Claude Haiku 4.5 (Fastest)</option>
-                        <option value="claude-3-5-sonnet-20240620">Claude 3.5 Sonnet (Legacy)</option>
+                        <option value="claude-sonnet-4-5-20250929" selected>Claude Sonnet 4.5 (Smart for Agents/Coding)</option>
+                        <option value="claude-opus-4-5-20251101">Claude Opus 4.5 (Maximum Intelligence)</option>
+                        <option value="claude-haiku-4-5-20251001">Claude Haiku 4.5 (Fast & Smart)</option>
+                        <option value="claude-3-5-haiku-20241022">Claude 3.5 Haiku (Fastest)</option>
+                        <option value="claude-3-5-sonnet-20241022">Claude 3.5 Sonnet (Legacy)</option>
                         <option value="claude-3-haiku-20240307">Claude 3 Haiku (Cheapest)</option>
                     </select>
                     <small>Claude 4.5 models recommended for best performance</small>
@@ -478,13 +516,35 @@
                 <div class="form-group hidden" id="openai-models">
                     <label for="openai-model">GPT Model</label>
                     <select id="openai-model">
-                        <option value="gpt-5.2" selected>GPT-5.2 (Best for Coding/Agents)</option>
-                        <option value="gpt-5">GPT-5 (Reasoning Model)</option>
-                        <option value="gpt-5-mini">GPT-5 Mini (Faster/Cheaper)</option>
-                        <option value="gpt-4.1">GPT-4.1 (Smart Non-Reasoning)</option>
-                        <option value="gpt-3.5-turbo">GPT-3.5 Turbo (Legacy/Cheapest)</option>
+                        <optgroup label="Flagship">
+                            <option value="gpt-5.2" selected>GPT-5.2 (Best for Coding/Agents)</option>
+                            <option value="gpt-5.2-pro">GPT-5.2 Pro (Smartest)</option>
+                            <option value="gpt-5">GPT-5 (Reasoning)</option>
+                            <option value="gpt-5-mini">GPT-5 Mini (Fast/Cheap)</option>
+                            <option value="gpt-5-nano">GPT-5 Nano (Fastest)</option>
+                        </optgroup>
+                        <optgroup label="Codex (Coding)">
+                            <option value="gpt-5.1-codex">GPT-5.1 Codex (Agentic Coding)</option>
+                            <option value="gpt-5.1-codex-max">GPT-5.1 Codex Max (Long-horizon)</option>
+                            <option value="gpt-5-codex">GPT-5 Codex</option>
+                        </optgroup>
+                        <optgroup label="Reasoning (o-series)">
+                            <option value="o3">o3 (Complex Tasks)</option>
+                            <option value="o3-pro">o3 Pro (More Compute)</option>
+                            <option value="o4-mini">o4-mini (Fast Reasoning)</option>
+                            <option value="o3-deep-research">o3 Deep Research</option>
+                        </optgroup>
+                        <optgroup label="Non-Reasoning">
+                            <option value="gpt-4.1">GPT-4.1 (Smart)</option>
+                            <option value="gpt-4.1-mini">GPT-4.1 Mini</option>
+                            <option value="gpt-4.1-nano">GPT-4.1 Nano</option>
+                        </optgroup>
+                        <optgroup label="Legacy">
+                            <option value="gpt-4-turbo">GPT-4 Turbo</option>
+                            <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+                        </optgroup>
                     </select>
-                    <small>GPT-5.2 recommended for game design tasks</small>
+                    <small>GPT-5.2 recommended for general tasks, Codex models for coding</small>
                 </div>
 
                 <div class="form-group">
@@ -2152,6 +2212,11 @@
     <script type="module" src="memory-ui.js"></script>
     <script type="module" src="auto-memory.js"></script>
     <script type="module" src="memory-details-modal.js"></script>
+    
+    <!-- Phase 1 Week 1: Favorites System -->
+    <script type="module" src="favorites-manager.js"></script>
+    <script type="module" src="favorites-ui.js"></script>
+    
     <script src="memory-graph.js"></script>
     <script src="context-panel.js"></script>
     <script src="multi-file-handler.js"></script>
@@ -2243,6 +2308,11 @@
     <script type="module">
         import { initMemoryUI } from './memory-ui.js';
         import { initAutoMemory, trackActivity } from './auto-memory.js';
+        import { initFavoritesUI } from './favorites-ui.js';
+        import { chatHistory } from './chat-history-manager.js';
+        
+        // Expose chatHistory globally for editor.js
+        window.chatHistory = chatHistory;
         
         // Initialize Memory UI when page loads
         if (document.readyState === 'loading') {
@@ -2250,12 +2320,14 @@
                 setTimeout(() => {
                     initMemoryUI();
                     initAutoMemory();
+                    initFavoritesUI();
                 }, 1000);
             });
         } else {
             setTimeout(() => {
                 initMemoryUI();
                 initAutoMemory();
+                initFavoritesUI();
             }, 1000);
         }
         

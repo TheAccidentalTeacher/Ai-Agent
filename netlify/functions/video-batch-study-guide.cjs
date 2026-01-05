@@ -189,7 +189,7 @@ Criteria for evaluating:
 Make this a COMPLETE, READY-TO-USE curriculum document. Format beautifully in Markdown with emojis, clear sections, and professional styling.`;
 
         const message = await anthropic.messages.create({
-            model: 'claude-sonnet-4-20250514',
+            model: 'claude-sonnet-4-5-20250929',
             max_tokens: 16000,
             temperature: 0.7,
             messages: [{

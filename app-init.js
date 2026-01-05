@@ -5,8 +5,18 @@
 
 import { initDocumentUpload } from './document-upload.js';
 import { initChatAttachments } from './chat-attachments.js';
+import { chatHistory } from './chat-history-manager.js';
 
 let conversationHistory = [];
+
+// Initialize chat history manager
+chatHistory.initialize().then(initialized => {
+    if (initialized) {
+        console.log('[App Init] ✓ Chat history manager initialized');
+    } else {
+        console.warn('[App Init] Chat history not available (user not authenticated)');
+    }
+});
 
 // Check if API keys are configured
 function checkAPIConfiguration() {
@@ -96,6 +106,14 @@ async function sendMessage() {
         // Build conversation history
         conversationHistory.push({ role: 'user', content: message });
         
+        // Save user message to persistent storage
+        try {
+            await chatHistory.saveMessage('user', message);
+            console.log('[App Init] ✓ Saved user message to database');
+        } catch (error) {
+            console.error('[App Init] ❌ Failed to save user message:', error);
+        }
+        
         // Get conversation ID from chat attachments module
         const conversationId = window.getCurrentConversationId ? window.getCurrentConversationId() : null;
         
@@ -177,6 +195,14 @@ async function sendMessage() {
         
         // Add to history
         conversationHistory.push({ role: 'assistant', content: assistantMessage });
+        
+        // Save assistant message to persistent storage
+        try {
+            await chatHistory.saveMessage('assistant', assistantMessage);
+            console.log('[App Init] ✓ Saved assistant message to database');
+        } catch (error) {
+            console.error('[App Init] ❌ Failed to save assistant message:', error);
+        }
         
         // Restore status
         statusElement.textContent = 'Ready';
