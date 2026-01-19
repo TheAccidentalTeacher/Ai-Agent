@@ -39,12 +39,13 @@ exports.handler = async (event, context) => {
     };
   }
 
-  const googleKey = process.env.GOOGLE_API_KEY;
+  // Check for Google API key (support both naming conventions)
+  const googleKey = process.env.GOOGLE_API_KEY || process.env.GOOGLE_CLOUD_API_KEY;
   if (!googleKey) {
     return {
       statusCode: 500,
       headers,
-      body: JSON.stringify({ error: 'Google API key not configured' })
+      body: JSON.stringify({ error: 'Google API key not configured. Set GOOGLE_API_KEY or GOOGLE_CLOUD_API_KEY.' })
     };
   }
 
