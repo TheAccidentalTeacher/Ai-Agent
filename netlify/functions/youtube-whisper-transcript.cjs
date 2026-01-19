@@ -5,13 +5,15 @@
  * Used when YouTube captions are not available
  * 
  * Flow:
- * 1. Extract audio URL from YouTube video
- * 2. Download audio (opus format, smallest)
+ * 1. Get audio stream URL from YouTube using @distube/ytdl-core
+ * 2. Download audio directly
  * 3. Send to OpenAI Whisper API
  * 4. Return formatted transcript with timestamps
+ * 
+ * Updated: Using @distube/ytdl-core for better reliability
  */
 
-const { Innertube } = require('youtubei.js');
+const ytdl = require('@distube/ytdl-core');
 const { fetch: undiciFetch } = require('undici');
 
 // OpenAI Whisper API endpoint
@@ -63,62 +65,73 @@ exports.handler = async (event, context) => {
     console.log(`🎤 Whisper transcription for video: ${videoId}`);
     const startTime = Date.now();
 
-    // Initialize YouTube client
-    const youtube = await Innertube.create({
-      retrieve_player: true,
-      generate_session_locally: true
-    });
+    const videoUrl = `https://www.youtube.com/watch?v=${videoId}`;
 
-    // Get video info
-    const videoInfo = await youtube.getBasicInfo(videoId);
-    const duration = videoInfo.basic_info?.duration || 0;
+    // Get video info first
+    console.log('   Getting video info...');
+    let videoInfo;
+    try {
+      videoInfo = await ytdl.getInfo(videoUrl, {
+        requestOptions: {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept-Language': 'en-US,en;q=0.9'
+          }
+        }
+      });
+    } catch (infoError) {
+      console.error('   Failed to get video info:', infoError.message);
+      throw new Error(`Cannot access video: ${infoError.message}`);
+    }
+
+    const duration = parseInt(videoInfo.videoDetails?.lengthSeconds) || 0;
+    const title = videoInfo.videoDetails?.title || 'Unknown';
     
-    console.log(`   Video duration: ${Math.floor(duration / 60)}:${(duration % 60).toString().padStart(2, '0')}`);
+    console.log(`   Title: ${title}`);
+    console.log(`   Duration: ${Math.floor(duration / 60)}:${(duration % 60).toString().padStart(2, '0')}`);
 
     // Check video length - Whisper has 25MB file limit
-    // For very long videos (> 30 min), we may need to warn user
-    if (duration > 1800) { // 30 minutes
-      console.log(`   ⚠️ Long video detected (${Math.floor(duration / 60)} min)`);
+    // Approximately 1MB per minute of audio at low quality
+    if (duration > 1500) { // 25 minutes max to be safe
+      throw new Error(`Video too long (${Math.floor(duration / 60)} min). Maximum is ~25 minutes for Whisper transcription.`);
     }
 
-    // Get audio stream URL (audio only, lowest quality for speed)
-    const streamingData = videoInfo.streaming_data;
-    if (!streamingData) {
-      throw new Error('No streaming data available for this video');
-    }
-
-    // Find audio-only format (prefer opus for smallest size)
-    let audioFormat = streamingData.adaptive_formats?.find(
-      f => f.mime_type?.includes('audio/webm') && f.audio_quality === 'AUDIO_QUALITY_LOW'
-    );
+    // Get audio-only format
+    const audioFormats = ytdl.filterFormats(videoInfo.formats, 'audioonly');
     
-    if (!audioFormat) {
-      audioFormat = streamingData.adaptive_formats?.find(
-        f => f.mime_type?.includes('audio/')
-      );
-    }
-
-    if (!audioFormat) {
+    if (!audioFormats || audioFormats.length === 0) {
       throw new Error('No audio format available for this video');
     }
 
-    console.log(`   Audio format: ${audioFormat.mime_type}, bitrate: ${audioFormat.bitrate}`);
+    // Sort by bitrate (lowest first for smaller file)
+    audioFormats.sort((a, b) => (a.audioBitrate || 0) - (b.audioBitrate || 0));
+    const audioFormat = audioFormats[0];
 
-    // Download audio
-    const audioUrl = audioFormat.decipher(youtube.session.player);
+    console.log(`   Audio format: ${audioFormat.mimeType}, bitrate: ${audioFormat.audioBitrate}kbps`);
     console.log(`   Downloading audio...`);
+
+    // Download audio as buffer
+    const audioChunks = [];
     
-    const audioResponse = await undiciFetch(audioUrl, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-      }
+    await new Promise((resolve, reject) => {
+      const stream = ytdl(videoUrl, {
+        format: audioFormat,
+        requestOptions: {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+          }
+        }
+      });
+
+      stream.on('data', chunk => audioChunks.push(chunk));
+      stream.on('end', resolve);
+      stream.on('error', reject);
+      
+      // Timeout after 60 seconds
+      setTimeout(() => reject(new Error('Audio download timeout')), 60000);
     });
 
-    if (!audioResponse.ok) {
-      throw new Error(`Failed to download audio: ${audioResponse.status}`);
-    }
-
-    const audioBuffer = Buffer.from(await audioResponse.arrayBuffer());
+    const audioBuffer = Buffer.concat(audioChunks);
     console.log(`   Audio size: ${(audioBuffer.length / 1024 / 1024).toFixed(2)} MB`);
 
     // Check file size (Whisper limit is 25MB)
@@ -126,43 +139,49 @@ exports.handler = async (event, context) => {
       throw new Error('Audio file too large for Whisper API (> 25MB). Try a shorter video.');
     }
 
+    // Determine file extension from mime type
+    let fileExt = 'webm';
+    if (audioFormat.mimeType?.includes('mp4')) fileExt = 'm4a';
+    else if (audioFormat.mimeType?.includes('webm')) fileExt = 'webm';
+    else if (audioFormat.mimeType?.includes('opus')) fileExt = 'opus';
+
     // Send to OpenAI Whisper
     console.log(`   Sending to Whisper API...`);
     
     // Create form data manually for Node.js
     const boundary = '----WebKitFormBoundary' + Math.random().toString(36).substring(2);
-    const formParts = [];
     
-    // Add file
-    formParts.push(
+    const formParts = [
       `--${boundary}\r\n`,
-      `Content-Disposition: form-data; name="file"; filename="audio.webm"\r\n`,
-      `Content-Type: audio/webm\r\n\r\n`
-    );
+      `Content-Disposition: form-data; name="file"; filename="audio.${fileExt}"\r\n`,
+      `Content-Type: ${audioFormat.mimeType || 'audio/webm'}\r\n\r\n`
+    ];
     
     const fileHeader = Buffer.from(formParts.join(''));
-    const fileFooter = Buffer.from(`\r\n--${boundary}\r\n`);
     
-    // Add model parameter
     const modelPart = Buffer.from(
-      `Content-Disposition: form-data; name="model"\r\n\r\nwhisper-1\r\n--${boundary}\r\n`
+      `\r\n--${boundary}\r\n` +
+      `Content-Disposition: form-data; name="model"\r\n\r\n` +
+      `whisper-1\r\n`
     );
     
-    // Add response_format parameter (verbose_json for timestamps)
     const formatPart = Buffer.from(
-      `Content-Disposition: form-data; name="response_format"\r\n\r\nverbose_json\r\n--${boundary}\r\n`
+      `--${boundary}\r\n` +
+      `Content-Disposition: form-data; name="response_format"\r\n\r\n` +
+      `verbose_json\r\n`
     );
     
-    // Add language parameter
     const langPart = Buffer.from(
-      `Content-Disposition: form-data; name="language"\r\n\r\n${language}\r\n--${boundary}--\r\n`
+      `--${boundary}\r\n` +
+      `Content-Disposition: form-data; name="language"\r\n\r\n` +
+      `${language}\r\n` +
+      `--${boundary}--\r\n`
     );
     
     // Combine all parts
     const formBody = Buffer.concat([
       fileHeader,
       audioBuffer,
-      fileFooter,
       modelPart,
       formatPart,
       langPart
@@ -180,7 +199,7 @@ exports.handler = async (event, context) => {
     if (!whisperResponse.ok) {
       const errorText = await whisperResponse.text();
       console.error('Whisper API error:', errorText);
-      throw new Error(`Whisper API error: ${whisperResponse.status}`);
+      throw new Error(`Whisper API error: ${whisperResponse.status} - ${errorText}`);
     }
 
     const whisperResult = await whisperResponse.json();
@@ -196,7 +215,7 @@ exports.handler = async (event, context) => {
     }));
 
     // Build full text
-    const fullText = segments.map(s => s.text).join(' ');
+    const fullText = whisperResult.text || segments.map(s => s.text).join(' ');
 
     const processingTime = ((Date.now() - startTime) / 1000).toFixed(1);
     console.log(`   ✅ Complete in ${processingTime}s`);
@@ -218,7 +237,8 @@ exports.handler = async (event, context) => {
         processingTime: parseFloat(processingTime),
         costEstimate: parseFloat(costEstimate),
         audioSize: audioBuffer.length,
-        detectedLanguage: whisperResult.language
+        detectedLanguage: whisperResult.language,
+        videoTitle: title
       }
     };
 
@@ -234,12 +254,16 @@ exports.handler = async (event, context) => {
     let errorMessage = error.message;
     let statusCode = 500;
 
-    if (error.message.includes('No streaming data')) {
-      errorMessage = 'Video is not available for audio extraction (may be private, age-restricted, or premium content)';
+    // Handle specific error types
+    if (error.message.includes('Video unavailable') || 
+        error.message.includes('Private video') ||
+        error.message.includes('Sign in')) {
+      errorMessage = 'Video is private, age-restricted, or requires sign-in';
       statusCode = 403;
-    } else if (error.message.includes('too large')) {
-      errorMessage = 'Video is too long for automatic transcription. Maximum ~25 minutes.';
+    } else if (error.message.includes('too long') || error.message.includes('too large')) {
       statusCode = 413;
+    } else if (error.message.includes('Cannot access')) {
+      statusCode = 403;
     }
 
     return {

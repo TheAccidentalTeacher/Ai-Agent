@@ -17,6 +17,7 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "@distube/ytdl-core": "^4.16.12",
     "@google-cloud/text-to-speech": "^6.4.0",
     "@mozilla/readability": "^0.6.0",
     "@supabase/supabase-js": "^2.87.1",
