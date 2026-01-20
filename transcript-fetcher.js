@@ -168,12 +168,17 @@ export async function getTranscriptWithGemini(videoId, language = 'en', onStatus
       body: JSON.stringify({ videoId, language })
     });
 
+    const responseData = await response.json().catch(() => ({ error: 'Invalid response from server' }));
+
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Gemini transcription failed');
+      // Log detailed error for debugging
+      console.error('Gemini API error details:', responseData);
+      const errorMsg = responseData.error || 'Gemini transcription failed';
+      const details = responseData.details ? ` Details: ${responseData.details.substring(0, 100)}` : '';
+      throw new Error(errorMsg + details);
     }
 
-    const transcriptData = await response.json();
+    const transcriptData = responseData;
     
     // Ensure metadata shows Gemini was used
     transcriptData.metadata = {

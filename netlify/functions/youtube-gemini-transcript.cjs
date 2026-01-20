@@ -9,6 +9,8 @@
  * 2. Handles any video length up to ~1 hour
  * 3. Works even when audio extraction fails
  * 4. No need to download audio locally
+ * 
+ * Note: Configured to run as a standard function with extended timeout
  */
 
 const { fetch: undiciFetch } = require('undici');
@@ -17,6 +19,11 @@ const { fetch: undiciFetch } = require('undici');
 // Note: YouTube URL feature is in preview and requires v1beta endpoint
 const GEMINI_MODEL = 'gemini-2.0-flash';
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
+
+// Netlify config for extended timeout (up to 26 seconds on paid plans)
+exports.config = {
+  type: 'default'
+};
 
 exports.handler = async (event, context) => {
   // CORS headers
@@ -117,29 +124,75 @@ VIDEO URL: ${videoUrl}`;
     };
 
     console.log('   Sending to Gemini API...');
+    console.log('   API URL:', GEMINI_API_URL);
+    console.log('   Video URL:', videoUrl);
 
-    const response = await undiciFetch(`${GEMINI_API_URL}?key=${googleKey}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(requestBody)
-    });
+    // Create an AbortController for timeout (Netlify has 10s limit)
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 25000); // 25 second timeout
+
+    let response;
+    try {
+      response = await undiciFetch(`${GEMINI_API_URL}?key=${googleKey}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestBody),
+        signal: controller.signal
+      });
+    } catch (fetchError) {
+      clearTimeout(timeoutId);
+      if (fetchError.name === 'AbortError') {
+        console.error('❌ Request timed out after 25 seconds');
+        return {
+          statusCode: 504,
+          headers,
+          body: JSON.stringify({ 
+            error: 'Gemini API request timed out. The video may be too long for real-time processing.',
+            suggestion: 'Try a shorter video or use YouTube captions if available.'
+          })
+        };
+      }
+      throw fetchError;
+    }
+    clearTimeout(timeoutId);
+
+    console.log('   Response status:', response.status);
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('Gemini API error:', errorText);
+      console.error('Gemini API error response:', errorText);
+      console.error('Response status:', response.status);
+      console.error('Response headers:', JSON.stringify(Object.fromEntries(response.headers.entries())));
       
       // Parse error for better messaging
       let errorMessage = `Gemini API error: ${response.status}`;
+      let errorDetails = errorText;
       try {
         const errorJson = JSON.parse(errorText);
         if (errorJson.error?.message) {
           errorMessage = errorJson.error.message;
+          errorDetails = JSON.stringify(errorJson.error, null, 2);
         }
-      } catch {}
+      } catch {
+        // If not JSON, it might be an HTML error page
+        if (errorText.includes('<HTML') || errorText.includes('<!DOCTYPE')) {
+          errorMessage = 'Gemini API returned an error page. The API key may be invalid or the service unavailable.';
+          errorDetails = 'HTML error page received';
+        }
+      }
       
-      throw new Error(errorMessage);
+      // Return the error with details for debugging
+      return {
+        statusCode: response.status,
+        headers,
+        body: JSON.stringify({ 
+          error: errorMessage,
+          details: errorDetails.substring(0, 500), // Limit size
+          apiStatus: response.status
+        })
+      };
     }
 
     const result = await response.json();
