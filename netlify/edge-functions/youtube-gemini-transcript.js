@@ -5,6 +5,23 @@
  * Edge Functions have much longer timeout (up to 120 seconds vs 10 seconds)
  */
 
+// Helper to get environment variable (works in both Deno and Netlify contexts)
+function getEnv(key) {
+  try {
+    // Try Netlify.env first (newer Netlify Edge)
+    if (typeof Netlify !== 'undefined' && Netlify.env) {
+      return Netlify.env.get(key);
+    }
+  } catch {}
+  try {
+    // Fall back to Deno.env
+    if (typeof Deno !== 'undefined' && Deno.env) {
+      return Deno.env.get(key);
+    }
+  } catch {}
+  return null;
+}
+
 export default async (request, context) => {
   // CORS headers
   const headers = {
@@ -27,16 +44,20 @@ export default async (request, context) => {
     );
   }
 
-  // Check for Gemini API key (Netlify Edge uses Netlify.env or Deno.env)
-  const geminiKey = Netlify.env.get('GEMINI_API_KEY') || 
-                    Netlify.env.get('GOOGLE_API_KEY') || 
-                    Netlify.env.get('GOOGLE_CLOUD_API_KEY');
+  // Check for Gemini API key (use helper function)
+  const geminiKey = getEnv('GEMINI_API_KEY') || 
+                    getEnv('GOOGLE_API_KEY') || 
+                    getEnv('GOOGLE_CLOUD_API_KEY');
   
   if (!geminiKey) {
     return new Response(
       JSON.stringify({ 
         error: 'Gemini API key not configured',
-        hint: 'Add GEMINI_API_KEY to Netlify environment variables and redeploy'
+        hint: 'Add GEMINI_API_KEY to Netlify environment variables and redeploy',
+        debug: {
+          hasNetlify: typeof Netlify !== 'undefined',
+          hasDeno: typeof Deno !== 'undefined'
+        }
       }),
       { status: 500, headers }
     );
