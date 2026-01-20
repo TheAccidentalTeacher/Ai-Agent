@@ -13,8 +13,10 @@
 
 const { fetch: undiciFetch } = require('undici');
 
-// Gemini API endpoint
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent';
+// Gemini API endpoint - using gemini-2.0-flash for YouTube video understanding
+// Note: YouTube URL feature is in preview and requires v1beta endpoint
+const GEMINI_MODEL = 'gemini-2.0-flash';
+const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 
 exports.handler = async (event, context) => {
   // CORS headers
@@ -86,6 +88,8 @@ Do not include any introduction, commentary, or summary. Just the pure transcrip
 
 VIDEO URL: ${videoUrl}`;
 
+    // Request body for Gemini API with YouTube URL
+    // Note: For YouTube URLs, we use file_data with fileUri (no mimeType needed)
     const requestBody = {
       contents: [{
         parts: [
@@ -93,9 +97,8 @@ VIDEO URL: ${videoUrl}`;
             text: prompt
           },
           {
-            fileData: {
-              mimeType: "video/mp4",
-              fileUri: videoUrl
+            file_data: {
+              file_uri: videoUrl
             }
           }
         ]
@@ -176,7 +179,7 @@ VIDEO URL: ${videoUrl}`;
       segmentCount: segments.length,
       metadata: {
         source: 'gemini',
-        model: 'gemini-2.0-flash-exp',
+        model: GEMINI_MODEL,
         processingTime: parseFloat(processingTime),
         costEstimate,
         note: 'AI-generated transcript - timestamps are approximate'
