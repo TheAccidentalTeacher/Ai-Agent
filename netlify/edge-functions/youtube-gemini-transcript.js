@@ -27,11 +27,17 @@ export default async (request, context) => {
     );
   }
 
-  // Check for Gemini API key
-  const geminiKey = Deno.env.get('GEMINI_API_KEY') || Deno.env.get('GOOGLE_API_KEY') || Deno.env.get('GOOGLE_CLOUD_API_KEY');
+  // Check for Gemini API key (Netlify Edge uses Netlify.env or Deno.env)
+  const geminiKey = Netlify.env.get('GEMINI_API_KEY') || 
+                    Netlify.env.get('GOOGLE_API_KEY') || 
+                    Netlify.env.get('GOOGLE_CLOUD_API_KEY');
+  
   if (!geminiKey) {
     return new Response(
-      JSON.stringify({ error: 'Gemini API key not configured. Set GEMINI_API_KEY in Netlify environment variables.' }),
+      JSON.stringify({ 
+        error: 'Gemini API key not configured',
+        hint: 'Add GEMINI_API_KEY to Netlify environment variables and redeploy'
+      }),
       { status: 500, headers }
     );
   }
