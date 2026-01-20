@@ -36,3 +36,8 @@
   from = "/api/*"
   to = "/.netlify/functions/:splat"
   status = 200
+
+# Edge Functions configuration
+[[edge_functions]]
+  path = "/api/gemini-transcript"
+  function = "youtube-gemini-transcript"

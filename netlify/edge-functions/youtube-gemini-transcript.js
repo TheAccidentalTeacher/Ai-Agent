@@ -308,8 +308,3 @@ function formatTimestamp(seconds) {
   }
   return `${minutes}:${secs.toString().padStart(2, '0')}`;
 }
-
-// Configure the edge function path
-export const config = {
-  path: "/api/gemini-transcript"
-};
